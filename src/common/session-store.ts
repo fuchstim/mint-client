@@ -34,7 +34,7 @@ export class SessionStore {
   }
 
   private get storeFileName() {
-    const storeIdentifier = createHash('sha256').update(this.identifier + this.secret).digest('hex');
+    const storeIdentifier = createHash('sha256').update(this.identifier).digest('hex');
 
     return path.resolve(`.session-store-${storeIdentifier}.json`);
   }

@@ -130,5 +130,5 @@ dist
 .pnp.*
 
 # Other
-.auth-cache*
+.session-store*
 .test-credentials.json

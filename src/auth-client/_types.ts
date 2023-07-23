@@ -58,12 +58,6 @@ export type TEvaluateAuthResponse =
   | ({ action: 'PASS', attributes: TAttribute[] } & TVerifySignInResponse)
   | { action: 'CHALLENGE', authContextId: string, attributes: TAttribute[], challenge: TAuthChallenge[] };
 
-export type TAuthorizationCache = {
-  deviceId: string,
-  refreshToken: string,
-  refreshTokenExpiresAt: number,
-};
-
 export type TAuthEvents = {
   authenticated: TOAuthAuthorizationCodeResponse,
   deauthenticated: null,

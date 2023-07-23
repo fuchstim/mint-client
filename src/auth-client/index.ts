@@ -1,34 +1,29 @@
 import axios from 'axios';
-import { createHash, randomUUID, randomBytes, createCipheriv, createDecipheriv } from 'crypto';
-import path from 'path';
-import fs from 'fs';
+import { randomUUID } from 'crypto';
 import jsonwebtoken, { JwtPayload } from 'jsonwebtoken';
 import Logger from '@ftim/logger';
 const logger = Logger.ns('Auth');
 
 import { EBaseUrl, EIntuitHeaderName, EMagicValues, ETokenGrantType, defaultHeaders } from './_constants';
-import { EAuthChallengeType, TAuthEvents, TAuthorizationCache, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './_types';
+import { EAuthChallengeType, TAuthEvents, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './_types';
 import { TypedEventEmitter } from '@ftim/typed-event-emitter';
+import { SessionStore } from '../common/session-store';
 
 export class AuthClient extends TypedEventEmitter<TAuthEvents> {
   private deviceId: string = randomUUID();
 
+  private sessionStore: SessionStore;
   private username: string;
   private password: string;
 
   private authorizationCode?: TOAuthAuthorizationCodeResponse;
 
-  constructor(username: string, password: string) {
+  constructor(sessionStore: SessionStore, username: string, password: string) {
     super();
 
+    this.sessionStore = sessionStore;
     this.username = username;
     this.password = password;
-  }
-
-  private get authCacheFileName() {
-    const authCacheIdentifier = createHash('sha256').update(this.username + this.password).digest('hex');
-
-    return path.resolve(`.auth-cache-${authCacheIdentifier}.json`);
   }
 
   private get refreshTokenExpiresAt() {
@@ -57,7 +52,11 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
 
       this.emit('authenticated', this.authorizationCode);
 
-      this.cacheAuthorizationCode();
+      this.sessionStore.set('auth', {
+        deviceId: this.deviceId,
+        refreshToken: this.authorizationCode.refresh_token,
+        refreshTokenExpiresAt: this.authorizationCode.refresh_token_expires_at.getTime(),
+      });
     }
 
     if (this.accessTokenExpiresAt < new Date()) {
@@ -75,7 +74,11 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
           this.emit('authenticated', this.authorizationCode);
         });
 
-      this.cacheAuthorizationCode();
+      this.sessionStore.set('auth', {
+        deviceId: this.deviceId,
+        refreshToken: this.authorizationCode.refresh_token,
+        refreshTokenExpiresAt: this.authorizationCode.refresh_token_expires_at.getTime(),
+      });
     }
 
     return this.authorizationCode.access_token;
@@ -84,9 +87,9 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
   private async authenticate() {
     logger.info('Authenticating...');
 
-    const cachedAuthorizationCode = await this.getCachedAuthorizationCode();
-    if (cachedAuthorizationCode) {
-      return cachedAuthorizationCode;
+    const hydratedAuthorizationCode = await this.hydrateFromSessionStore();
+    if (hydratedAuthorizationCode) {
+      return hydratedAuthorizationCode;
     }
 
     const firstEvalResult = await this.evaluateAuth();
@@ -129,7 +132,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
 
     this.authorizationCode = undefined;
 
-    this.clearAuthorizationCodeCache();
+    this.sessionStore.set('auth', undefined);
 
     this.emit('deauthenticated', null);
   }
@@ -319,75 +322,26 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     return data;
   }
 
-  private cacheAuthorizationCode() {
-    if (!this.authorizationCode) {
-      throw new Error('No authorization code');
+  async hydrateFromSessionStore() {
+    const authStore = this.sessionStore.get('auth');
+    if (!authStore) { return; }
+
+    const { deviceId, refreshToken, refreshTokenExpiresAt, } = authStore;
+
+    if (!deviceId || !refreshToken || !refreshTokenExpiresAt) {
+      throw new Error('One or more values are missing from auth store');
     }
 
-    const cacheData: TAuthorizationCache = {
-      deviceId: this.deviceId,
-      refreshToken: this.authorizationCode.refresh_token,
-      refreshTokenExpiresAt: this.authorizationCode.refresh_token_expires_at.getTime(),
-    };
-
-    const iv = randomBytes(16);
-    const key = createHash('sha256').update(this.password).digest('base64').slice(0, 32);
-    const cipher = createCipheriv('aes-256-cbc', key, iv);
-
-    const encrypted = Buffer.concat([
-      cipher.update(JSON.stringify(cacheData)),
-      cipher.final(),
-    ]);
-
-    fs.writeFileSync(this.authCacheFileName, `${iv.toString('hex')}:${encrypted.toString('hex')}`);
-  }
-
-  private clearAuthorizationCodeCache() {
-    try {
-      fs.unlinkSync(this.authCacheFileName);
-    } catch (e) {
-      const error = e as Error;
-      logger.info(`Failed to clear authorization cache: ${error.message}`);
+    if (refreshTokenExpiresAt < Date.now()) {
+      throw new Error('Stored refresh token has expired');
     }
-  }
 
-  private async getCachedAuthorizationCode() {
-    logger.info('Reading authorization cache...');
+    this.deviceId = deviceId;
 
-    try {
-      const cacheFile = fs.readFileSync(this.authCacheFileName, 'utf8');
+    logger.info('Validating cached credentials...');
 
-      const [ iv, encrypted, ] = cacheFile.split(':');
-      const key = createHash('sha256').update(this.password).digest('base64').slice(0, 32);
+    const authorizationCode = await this.refreshAuthorizationCode(refreshToken);
 
-      const decipher = createDecipheriv('aes-256-cbc', key, Buffer.from(iv, 'hex'));
-      const decrypted = Buffer.concat([
-        decipher.update(Buffer.from(encrypted, 'hex')),
-        decipher.final(),
-      ]);
-
-      const cacheData = JSON.parse(decrypted.toString()) as TAuthorizationCache;
-
-      if (!cacheData.deviceId || !cacheData.refreshToken || !cacheData.refreshTokenExpiresAt) {
-        throw new Error('One or more values are missing');
-      }
-
-      if (cacheData.refreshTokenExpiresAt < Date.now()) {
-        throw new Error('Cached refresh token has expired');
-      }
-
-      this.deviceId = cacheData.deviceId;
-
-      logger.info('Validating cached credentials...');
-
-      const authorizationCode = await this.refreshAuthorizationCode(cacheData.refreshToken);
-
-      return authorizationCode;
-    } catch (e) {
-      const error = e as Error;
-      logger.info(`No valid authorization cache found: ${error.message}`);
-
-      return;
-    }
+    return authorizationCode;
   }
 }
