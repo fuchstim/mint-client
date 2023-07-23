@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomUUID, randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import jsonwebtoken, { JwtPayload } from 'jsonwebtoken';
@@ -277,16 +277,34 @@ export class AuthClient {
       refreshTokenExpiresAt: this.authorizationCode.refresh_token_expires_at.getTime(),
     };
 
-    fs.writeFileSync(this.authCacheFileName, JSON.stringify(cacheData));
+    const iv = randomBytes(16);
+    const key = createHash('sha256').update(this.password).digest('base64').slice(0, 32);
+    const cipher = createCipheriv('aes-256-cbc', key, iv);
+
+    const encrypted = Buffer.concat([
+      cipher.update(JSON.stringify(cacheData)),
+      cipher.final(),
+    ]);
+
+    fs.writeFileSync(this.authCacheFileName, `${iv.toString('hex')}:${encrypted.toString('hex')}`);
   }
 
   private async getCachedAuthorizationCode() {
     logger.info('Reading authorization cache...');
 
     try {
-      const cacheData = JSON.parse(
-        fs.readFileSync(this.authCacheFileName, 'utf-8')
-      ) as TAuthorizationCache;
+      const cacheFile = fs.readFileSync(this.authCacheFileName, 'utf8');
+
+      const [ iv, encrypted, ] = cacheFile.split(':');
+      const key = createHash('sha256').update(this.password).digest('base64').slice(0, 32);
+
+      const decipher = createDecipheriv('aes-256-cbc', key, Buffer.from(iv, 'hex'));
+      const decrypted = Buffer.concat([
+        decipher.update(Buffer.from(encrypted, 'hex')),
+        decipher.final(),
+      ]);
+
+      const cacheData = JSON.parse(decrypted.toString()) as TAuthorizationCache;
 
       if (!cacheData.deviceId || !cacheData.refreshToken || !cacheData.refreshTokenExpiresAt) {
         throw new Error('One or more values are missing');
