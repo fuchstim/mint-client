@@ -1,0 +1,26 @@
+{
+  "name": "@ftim/mint-client",
+  "version": "1.0.3",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "scripts": {
+    "clean": "rm -rf ./dist",
+    "build": "tsc -p ./tsconfig.json",
+    "rebuild": "npm run clean && npm run build",
+    "prepublish": "npm run rebuild",
+    "start": "ts-node ./src/index.ts"
+  },
+  "keywords": [],
+  "author": "Tim Fuchs <mail@ftim.dev> (https://github.com/fuchstim)",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.4.4",
+    "@typescript-eslint/eslint-plugin": "^6.1.0",
+    "@typescript-eslint/parser": "^6.1.0",
+    "eslint": "^8.45.0",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "axios": "^1.4.0"
+  }
+}
