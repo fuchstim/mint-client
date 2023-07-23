@@ -14,6 +14,7 @@
   "author": "Tim Fuchs <mail@ftim.dev> (https://github.com/fuchstim)",
   "license": "ISC",
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.2",
     "@types/node": "^20.4.4",
     "@typescript-eslint/eslint-plugin": "^6.1.0",
     "@typescript-eslint/parser": "^6.1.0",

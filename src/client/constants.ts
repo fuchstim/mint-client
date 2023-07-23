@@ -18,7 +18,8 @@ export enum EIntuitHeaderName {
 
 export enum ETokenGrantType {
   CLIENT_CREDENTIALS = 'client_credentials',
-  AUTHORIZATION_CODE = 'authorization_code'
+  AUTHORIZATION_CODE = 'authorization_code',
+  REFRESH_TOKEN = 'refresh_token'
 }
 
 export const defaultHeaders = {

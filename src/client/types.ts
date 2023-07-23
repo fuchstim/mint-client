@@ -9,6 +9,7 @@ export type TOAuthAuthorizationCodeResponse = TOAuthClientCredentialsResponse & 
   id_token: string,
   refresh_token: string,
   x_refresh_token_expires_in: number,
+  refresh_token_expires_at: Date
 };
 
 export type TAuthTokenFormat = {
@@ -56,3 +57,9 @@ export type TAttribute = { key: string, value: string };
 export type TEvaluateAuthResponse =
   | ({ action: 'PASS', attributes: TAttribute[] } & TVerifySignInResponse)
   | { action: 'CHALLENGE', authContextId: string, attributes: TAttribute[], challenge: TAuthChallenge[] };
+
+export type TAuthorizationCache = {
+  deviceId: string,
+  refreshToken: string,
+  refreshTokenExpiresAt: number,
+};

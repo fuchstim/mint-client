@@ -1,16 +1,83 @@
 import axios from 'axios';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
+import path from 'path';
+import fs from 'fs';
+import jsonwebtoken, { JwtPayload } from 'jsonwebtoken';
+import Logger from '@ftim/logger';
+const logger = Logger.ns('Auth');
 
 import { EBaseUrl, EIntuitHeaderName, EMagicValues, ETokenGrantType, defaultHeaders } from './constants';
-import { EAuthChallengeType, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './types';
+import { EAuthChallengeType, TAuthorizationCache, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './types';
 
 export class AuthClient {
   private deviceId: string = randomUUID();
 
-  async authenticate(identifier: string, password: string) {
-    const firstEvalResult = await this.evaluateAuth(identifier);
+  private userIdentifier: string;
+  private password: string;
+
+  private authorizationCode?: TOAuthAuthorizationCodeResponse;
+
+  constructor(userIdentifier: string, password: string) {
+    this.userIdentifier = userIdentifier;
+    this.password = password;
+  }
+
+  get authCacheFileName() {
+    const authCacheIdentifier = createHash('sha256').update(this.userIdentifier + this.password).digest('hex');
+
+    return path.resolve(`.auth-cache-${authCacheIdentifier}.json`);
+  }
+
+  get refreshTokenExpiresAt() {
+    return this.authorizationCode?.refresh_token_expires_at ?? new Date(0);
+  }
+
+  get accessTokenExpiresAt() {
+    if (!this.authorizationCode) {
+      return new Date(0);
+    }
+
+    const decoded = jsonwebtoken.decode(this.authorizationCode.access_token) as JwtPayload;
+
+    const expiresAt = decoded?.exp ?? 0;
+
+    return new Date(expiresAt * 1_000);
+  }
+
+  async getAccessToken() {
+    if (!this.authorizationCode || this.refreshTokenExpiresAt < new Date()) {
+      this.authorizationCode = await this.authenticate();
+
+      this.cacheAuthorizationCode();
+    }
+
+    if (this.accessTokenExpiresAt < new Date()) {
+      this.authorizationCode = await this.refreshAuthorizationCode(this.authorizationCode.refresh_token)
+        .catch(error => {
+          logger.error('Failed to refresh authorization code', error);
+
+          return this.authenticate();
+        });
+
+      this.cacheAuthorizationCode();
+    }
+
+    return this.authorizationCode.access_token;
+  }
+
+  private async authenticate() {
+    logger.info('Authenticating...');
+
+    const cachedAuthorizationCode = await this.getCachedAuthorizationCode();
+    if (cachedAuthorizationCode) {
+      return cachedAuthorizationCode;
+    }
+
+    const firstEvalResult = await this.evaluateAuth();
     if (firstEvalResult.action === 'PASS') {
-      throw new Error('Already authenticated');
+      const authorizationCode = await this.createAuthorizationCode(firstEvalResult.oauth2CodeResponse.code);
+
+      return authorizationCode;
     }
 
     const primaryChallenge = firstEvalResult.challenge.find(({ primary, }) => primary);
@@ -22,9 +89,9 @@ export class AuthClient {
       throw new Error(`Primary challenge is not password: ${primaryChallenge.type}`);
     }
 
-    const challengeResult = await this.submitChallenge(firstEvalResult.authContextId, primaryChallenge.type, password);
+    const challengeResult = await this.submitPasswordChallenge(firstEvalResult.authContextId);
 
-    const secondEvalResult = await this.evaluateAuth(identifier, challengeResult.oauth2CodeResponse.code);
+    const secondEvalResult = await this.evaluateAuth(challengeResult.oauth2CodeResponse.code);
 
     if (secondEvalResult.action !== 'PASS') {
       throw new Error('Second evaluation failed');
@@ -44,13 +111,28 @@ export class AuthClient {
   }
 
   private async createAuthorizationCode(code: string) {
-    const data = await this.createBearerToken<TOAuthAuthorizationCodeResponse, { code: string, redirect_uri: string }>({
+    const data = await this.createBearerToken<Omit<TOAuthAuthorizationCodeResponse, 'refresh_token_expires_at'>, { code: string, redirect_uri: string }>({
       code,
       grant_type: ETokenGrantType.AUTHORIZATION_CODE,
       redirect_uri: EMagicValues.OAUTH_REDIRECT_URI,
     });
 
-    return data;
+    return {
+      ...data,
+      refresh_token_expires_at: new Date(Date.now() + data.x_refresh_token_expires_in),
+    };
+  }
+
+  private async refreshAuthorizationCode(refresh_token: string) {
+    const data = await this.createBearerToken<Omit<TOAuthAuthorizationCodeResponse, 'refresh_token_expires_at'>, { refresh_token: string }>({
+      refresh_token,
+      grant_type: ETokenGrantType.REFRESH_TOKEN,
+    });
+
+    return {
+      ...data,
+      refresh_token_expires_at: new Date(Date.now() + data.x_refresh_token_expires_in),
+    };
   }
 
   private async createBearerToken<R, P = Record<string, string>>(params: P & { grant_type: ETokenGrantType }) {
@@ -76,8 +158,10 @@ export class AuthClient {
     return data;
   }
 
-  private async evaluateAuth(identifier: string, authCode?: string) {
+  private async evaluateAuth(authCode?: string) {
     const { access_token, } = authCode ? await this.createAuthorizationCode(authCode) : await this.createClientCredentials();
+
+    logger.info(`Evaluating auth for ${this.userIdentifier}...`);
 
     const payload = {
       oauth2CodeRequest: {
@@ -90,7 +174,7 @@ export class AuthClient {
           attributes: [
             {
               key: 'identifier',
-              value: identifier,
+              value: this.userIdentifier,
             },
             {
               key: 'namespaceId',
@@ -123,11 +207,21 @@ export class AuthClient {
       }
     );
 
+    logger.info(`Evaluated auth for ${this.userIdentifier}: ${data.action}`);
+
     return data;
+  }
+
+  private async submitPasswordChallenge(authContextId: string) {
+    const result = await this.submitChallenge(authContextId, EAuthChallengeType.PASSWORD, this.password);
+
+    return result;
   }
 
   private async submitChallenge(authContextId: string, type: EAuthChallengeType, value: string) {
     const { access_token, } = await this.createClientCredentials();
+
+    logger.info(`Submitting challenge for ${type}...`);
 
     const payload = {
       challengeToken: [
@@ -158,6 +252,53 @@ export class AuthClient {
       }
     );
 
+    logger.info(`Submitted challenge for ${type}; risk level: ${data.riskLevel}, status: ${data.oauth2CodeResponse.error}`);
+
     return data;
+  }
+
+  private cacheAuthorizationCode() {
+    if (!this.authorizationCode) {
+      throw new Error('No authorization code');
+    }
+
+    const cacheData: TAuthorizationCache = {
+      deviceId: this.deviceId,
+      refreshToken: this.authorizationCode.refresh_token,
+      refreshTokenExpiresAt: this.authorizationCode.refresh_token_expires_at.getTime(),
+    };
+
+    fs.writeFileSync(this.authCacheFileName, JSON.stringify(cacheData));
+  }
+
+  private async getCachedAuthorizationCode() {
+    logger.info('Reading authorization cache...');
+
+    try {
+      const cacheData = JSON.parse(
+        fs.readFileSync(this.authCacheFileName, 'utf-8')
+      ) as TAuthorizationCache;
+
+      if (!cacheData.deviceId || !cacheData.refreshToken || !cacheData.refreshTokenExpiresAt) {
+        throw new Error('One or more values are missing');
+      }
+
+      if (cacheData.refreshTokenExpiresAt < Date.now()) {
+        throw new Error('Cached refresh token has expired');
+      }
+
+      this.deviceId = cacheData.deviceId;
+
+      logger.info('Validating cached credentials...');
+
+      const authorizationCode = await this.refreshAuthorizationCode(cacheData.refreshToken);
+
+      return authorizationCode;
+    } catch (e) {
+      const error = e as Error;
+      logger.info(`No valid authorization cache found: ${error.message}`);
+
+      return;
+    }
   }
 }
