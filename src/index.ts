@@ -1,5 +1,9 @@
+import fs from 'fs';
+
 import { AuthClient } from './auth-client';
 
-const authClient = new AuthClient('tim@shakepay.com', '-ba3DZk7dwbQq!_QeJJYshTckPKyLa*2');
+const { username, password, } = JSON.parse(fs.readFileSync('./.test-credentials.json', 'utf-8'));
+
+const authClient = new AuthClient(username, password);
 
 authClient.getAccessToken().then(console.log);

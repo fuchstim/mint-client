@@ -131,3 +131,4 @@ dist
 
 # Other
 .auth-cache*
+.test-credentials.json
