@@ -323,24 +323,35 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
   }
 
   async hydrateFromSessionStore() {
+    logger.info('Hydrating from session store...');
+
     const authStore = this.sessionStore.get('auth');
     if (!authStore) { return; }
 
     const { deviceId, refreshToken, refreshTokenExpiresAt, } = authStore;
 
     if (!deviceId || !refreshToken || !refreshTokenExpiresAt) {
-      throw new Error('One or more values are missing from auth store');
+      logger.info('One or more values are missing from auth store');
+
+      return;
     }
 
     if (refreshTokenExpiresAt < Date.now()) {
-      throw new Error('Stored refresh token has expired');
+      logger.info('Stored refresh token has expired');
+
+      return;
     }
 
     this.deviceId = deviceId;
 
-    logger.info('Validating cached credentials...');
+    logger.info('Validating stored credentials...');
 
-    const authorizationCode = await this.refreshAuthorizationCode(refreshToken);
+    const authorizationCode = await this.refreshAuthorizationCode(refreshToken)
+      .catch(error => {
+        logger.info(`Failed to refresh stored authorization code: ${error.message}`);
+
+        return;
+      });
 
     return authorizationCode;
   }
