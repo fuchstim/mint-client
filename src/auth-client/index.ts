@@ -13,29 +13,29 @@ import { TypedEventEmitter } from '@ftim/typed-event-emitter';
 export class AuthClient extends TypedEventEmitter<TAuthEvents> {
   private deviceId: string = randomUUID();
 
-  private userIdentifier: string;
+  private username: string;
   private password: string;
 
   private authorizationCode?: TOAuthAuthorizationCodeResponse;
 
-  constructor(userIdentifier: string, password: string) {
+  constructor(username: string, password: string) {
     super();
 
-    this.userIdentifier = userIdentifier;
+    this.username = username;
     this.password = password;
   }
 
-  get authCacheFileName() {
-    const authCacheIdentifier = createHash('sha256').update(this.userIdentifier + this.password).digest('hex');
+  private get authCacheFileName() {
+    const authCacheIdentifier = createHash('sha256').update(this.username + this.password).digest('hex');
 
     return path.resolve(`.auth-cache-${authCacheIdentifier}.json`);
   }
 
-  get refreshTokenExpiresAt() {
+  private get refreshTokenExpiresAt() {
     return this.authorizationCode?.refresh_token_expires_at ?? new Date(0);
   }
 
-  get accessTokenExpiresAt() {
+  private get accessTokenExpiresAt() {
     if (!this.authorizationCode) {
       return new Date(0);
     }
@@ -45,6 +45,10 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     const expiresAt = decoded?.exp ?? 0;
 
     return new Date(expiresAt * 1_000);
+  }
+
+  getUsername() {
+    return this.username;
   }
 
   async getAccessToken() {
@@ -75,10 +79,6 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     }
 
     return this.authorizationCode.access_token;
-  }
-
-  async getDeviceId() {
-    return this.deviceId;
   }
 
   private async authenticate() {
@@ -214,7 +214,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
   private async evaluateAuth(authCode?: string) {
     const { access_token, } = authCode ? await this.createAuthorizationCode(authCode) : await this.createClientCredentials();
 
-    logger.info(`Evaluating auth for ${this.userIdentifier}...`);
+    logger.info(`Evaluating auth for ${this.username}...`);
 
     const payload = {
       oauth2CodeRequest: {
@@ -227,7 +227,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
           attributes: [
             {
               key: 'identifier',
-              value: this.userIdentifier,
+              value: this.username,
             },
             {
               key: 'namespaceId',
@@ -260,7 +260,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
       }
     );
 
-    logger.info(`Evaluated auth for ${this.userIdentifier}: ${data.action}`);
+    logger.info(`Evaluated auth for ${this.username}: ${data.action}`);
 
     return data;
   }

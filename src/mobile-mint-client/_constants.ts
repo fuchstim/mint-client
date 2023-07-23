@@ -1,3 +1,5 @@
+export const BASE_URL = 'https://mobile.mint.com' as const;
+
 export const defaultHeaders = {
   Accept: 'text/html,application/xhtml+xml,application/xml, text/json',
   'Accept-Language': 'en-CA,en-US;q=0.9,en;q=0.8',
