@@ -6,13 +6,17 @@ import type { AuthClient } from '../auth-client';
 import { BASE_URL, defaultHeaders } from './_constants';
 import { CookieStore } from '../common/cookie-store';
 import { TGetNewUuidResponse, TRegisterDeviceIdResponse } from './_types';
+import { SessionStore } from '../common/session-store';
 
 export class MobileMintClient {
+  private sessionStore: SessionStore;
   private authClient: AuthClient;
   private client: AxiosInstance;
   private cookieStore: CookieStore = new CookieStore();
+  private deviceId?: string;
 
-  constructor(authClient: AuthClient) {
+  constructor(sessionStore: SessionStore, authClient: AuthClient) {
+    this.sessionStore = sessionStore;
     this.authClient = authClient;
 
     this.client = axios.create({
@@ -34,12 +38,21 @@ export class MobileMintClient {
     return this.client.defaults.headers['mint-userid'] as string | undefined;
   }
 
-  async init() {
+  async init(bypassSessionStore = false) {
     logger.info('Initializing...');
+
+    if (!bypassSessionStore) {
+      const hydrationSuccessful = this.hydrateFromSessionStore();
+      if (hydrationSuccessful) {
+        logger.info('Initialized from session store.');
+
+        return;
+      }
+    }
 
     await this.initCookieStore();
 
-    const deviceId = await this.getDeviceId();
+    this.deviceId = await this.getDeviceId();
 
     this.client.interceptors.request.use(async request => {
       const accessToken = await this.authClient.getAccessToken();
@@ -49,9 +62,15 @@ export class MobileMintClient {
       return request;
     });
 
-    this.userId = await this.registerDeviceId(deviceId);
+    this.userId = await this.registerDeviceId(this.deviceId);
 
-    await this.submitDeviceToken(deviceId, this.userId);
+    await this.submitDeviceToken(this.deviceId, this.userId);
+
+    this.sessionStore.set('mobileMint', {
+      deviceId: this.deviceId,
+      userId: this.userId,
+      cookies: this.cookieStore.bulkGet(),
+    });
   }
 
   private async initCookieStore() {
@@ -151,5 +170,25 @@ export class MobileMintClient {
       new URLSearchParams(payload).toString(),
       { params, }
     );
+  }
+
+  private hydrateFromSessionStore() {
+    const store = this.sessionStore.get('mobileMint');
+    if (!store) { return false; }
+
+    const { deviceId, userId, cookies, } = store;
+
+    if (!deviceId || !userId || !cookies) {
+      logger.warn('Invalid session store data.');
+
+      return false;
+    }
+
+    this.cookieStore.reset();
+    this.cookieStore.bulkSet(cookies);
+    this.userId = userId;
+    this.deviceId = deviceId;
+
+    return true;
   }
 }

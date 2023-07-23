@@ -10,6 +10,11 @@ export type TSessionStore = {
     deviceId: string,
     refreshToken: string,
     refreshTokenExpiresAt: number,
+  },
+  mobileMint?: {
+    deviceId: string,
+    userId: string,
+    cookies: Record<string, string>
   }
 };
 

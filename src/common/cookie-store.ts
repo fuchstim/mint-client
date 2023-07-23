@@ -47,12 +47,26 @@ export class CookieStore {
     };
   }
 
-  getCookies() {
+  get(key: string) {
+    return this.cookies[key];
+  }
+
+  bulkGet() {
     return { ...this.cookies, };
   }
 
-  setCookies(cookies: Record<string, string>) {
-    this.cookies = cookies;
+  set(key: string, value: string) {
+    this.cookies = {
+      ...this.cookies,
+      [key]: value,
+    };
+  }
+
+  bulkSet(values: Record<string, string>) {
+    this.cookies = {
+      ...this.cookies,
+      ...values,
+    };
   }
 
   reset() {

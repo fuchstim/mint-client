@@ -10,8 +10,6 @@ const sessionStore = new SessionStore(username, password);
 
 const authClient = new AuthClient(sessionStore, username, password);
 
-authClient.getAccessToken().then(console.log);
+const mobileMintClient = new MobileMintClient(sessionStore, authClient);
 
-// const mobileMintClient = new MobileMintClient(authClient);
-
-// mobileMintClient.init().then(console.log);
+mobileMintClient.init().then(() => { debugger; });
