@@ -213,7 +213,16 @@ export class AuthClient {
   }
 
   private async submitPasswordChallenge(authContextId: string) {
-    const result = await this.submitChallenge(authContextId, EAuthChallengeType.PASSWORD, this.password);
+    const result = await this.submitChallenge(authContextId, EAuthChallengeType.PASSWORD, this.password)
+      .catch(error => {
+        const responseCode = error.response?.data?.responseCode;
+
+        if (responseCode === 'INVALID_CREDENTIALS') {
+          throw new Error('Invalid credentials');
+        }
+
+        throw new Error(`Failed to submit password challenge: ${responseCode}`);
+      });
 
     return result;
   }
