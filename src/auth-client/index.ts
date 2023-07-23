@@ -69,7 +69,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
         .catch(async error => {
           logger.error('Failed to refresh authorization code', error);
 
-          this.authorizationCode = await this.authenticate();
+          this.authorizationCode = await this.authenticate(true);
 
           this.emit('authenticated', this.authorizationCode);
         });
@@ -84,12 +84,14 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     return this.authorizationCode.access_token;
   }
 
-  private async authenticate() {
+  private async authenticate(bypassSessionStore = false) {
     logger.info('Authenticating...');
 
-    const hydratedAuthorizationCode = await this.hydrateFromSessionStore();
-    if (hydratedAuthorizationCode) {
-      return hydratedAuthorizationCode;
+    if (bypassSessionStore) {
+      const hydratedAuthorizationCode = await this.hydrateFromSessionStore();
+      if (hydratedAuthorizationCode) {
+        return hydratedAuthorizationCode;
+      }
     }
 
     const firstEvalResult = await this.evaluateAuth();
