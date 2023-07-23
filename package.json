@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@ftim/logger": "^1.0.3",
+    "@ftim/typed-event-emitter": "^1.0.1",
     "axios": "^1.4.0",
     "jsonwebtoken": "^9.0.1"
   }

@@ -7,9 +7,10 @@ import Logger from '@ftim/logger';
 const logger = Logger.ns('Auth');
 
 import { EBaseUrl, EIntuitHeaderName, EMagicValues, ETokenGrantType, defaultHeaders } from './_constants';
-import { EAuthChallengeType, TAuthorizationCache, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './_types';
+import { EAuthChallengeType, TAuthEvents, TAuthorizationCache, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './_types';
+import { TypedEventEmitter } from '@ftim/typed-event-emitter';
 
-export class AuthClient {
+export class AuthClient extends TypedEventEmitter<TAuthEvents> {
   private deviceId: string = randomUUID();
 
   private userIdentifier: string;
@@ -18,6 +19,8 @@ export class AuthClient {
   private authorizationCode?: TOAuthAuthorizationCodeResponse;
 
   constructor(userIdentifier: string, password: string) {
+    super();
+
     this.userIdentifier = userIdentifier;
     this.password = password;
   }
@@ -48,21 +51,34 @@ export class AuthClient {
     if (!this.authorizationCode || this.refreshTokenExpiresAt < new Date()) {
       this.authorizationCode = await this.authenticate();
 
+      this.emit('authenticated', this.authorizationCode);
+
       this.cacheAuthorizationCode();
     }
 
     if (this.accessTokenExpiresAt < new Date()) {
-      this.authorizationCode = await this.refreshAuthorizationCode(this.authorizationCode.refresh_token)
-        .catch(error => {
+      await this.refreshAuthorizationCode(this.authorizationCode.refresh_token)
+        .then(authorizationCode => {
+          this.authorizationCode = authorizationCode;
+
+          this.emit('authorizationCodeRefreshed', this.authorizationCode);
+        })
+        .catch(async error => {
           logger.error('Failed to refresh authorization code', error);
 
-          return this.authenticate();
+          this.authorizationCode = await this.authenticate();
+
+          this.emit('authenticated', this.authorizationCode);
         });
 
       this.cacheAuthorizationCode();
     }
 
     return this.authorizationCode.access_token;
+  }
+
+  async getDeviceId() {
+    return this.deviceId;
   }
 
   private async authenticate() {
@@ -112,6 +128,10 @@ export class AuthClient {
       .catch(() => logger.error('Failed to revoke bearer token'));
 
     this.authorizationCode = undefined;
+
+    this.clearAuthorizationCodeCache();
+
+    this.emit('deauthenticated', null);
   }
 
   private async createClientCredentials() {
@@ -320,6 +340,15 @@ export class AuthClient {
     ]);
 
     fs.writeFileSync(this.authCacheFileName, `${iv.toString('hex')}:${encrypted.toString('hex')}`);
+  }
+
+  private clearAuthorizationCodeCache() {
+    try {
+      fs.unlinkSync(this.authCacheFileName);
+    } catch (e) {
+      const error = e as Error;
+      logger.info(`Failed to clear authorization cache: ${error.message}`);
+    }
   }
 
   private async getCachedAuthorizationCode() {

@@ -63,3 +63,9 @@ export type TAuthorizationCache = {
   refreshToken: string,
   refreshTokenExpiresAt: number,
 };
+
+export type TAuthEvents = {
+  authenticated: TOAuthAuthorizationCodeResponse,
+  deauthenticated: null,
+  authorizationCodeRefreshed: TOAuthAuthorizationCodeResponse,
+};
