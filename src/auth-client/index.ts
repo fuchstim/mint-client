@@ -102,6 +102,18 @@ export class AuthClient {
     return authorizationCode;
   }
 
+  private async deauthenticate() {
+    logger.info('Deauthenticating...');
+
+    const refreshToken = this.authorizationCode?.refresh_token;
+    if (!refreshToken) { return; }
+
+    await this.revokeBearerToken(refreshToken)
+      .catch(() => logger.error('Failed to revoke bearer token'));
+
+    this.authorizationCode = undefined;
+  }
+
   private async createClientCredentials() {
     const data = await this.createBearerToken<TOAuthClientCredentialsResponse>({
       grant_type: ETokenGrantType.CLIENT_CREDENTIALS,
@@ -110,9 +122,9 @@ export class AuthClient {
     return data;
   }
 
-  private async createAuthorizationCode(code: string) {
+  private async createAuthorizationCode(authCode: string) {
     const data = await this.createBearerToken<Omit<TOAuthAuthorizationCodeResponse, 'refresh_token_expires_at'>, { code: string, redirect_uri: string }>({
-      code,
+      code: authCode,
       grant_type: ETokenGrantType.AUTHORIZATION_CODE,
       redirect_uri: EMagicValues.OAUTH_REDIRECT_URI,
     });
@@ -156,6 +168,27 @@ export class AuthClient {
     );
 
     return data;
+  }
+
+  private async revokeBearerToken(token: string) {
+    await axios.post<void>(
+      '/oauth2/v1/tokens/revoke',
+      new URLSearchParams({ token, }).toString(),
+      {
+        baseURL: EBaseUrl.AUTH_OAUTH,
+        auth: {
+          username: EMagicValues.OAUTH_CLIENT_ID,
+          password: EMagicValues.OAUTH_CLIENT_SECRET,
+        },
+        headers: {
+          ...defaultHeaders.auth,
+          Accept: '*/*',
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          [EIntuitHeaderName.DEVICE_ID]: this.deviceId,
+          [EIntuitHeaderName.TID]: randomUUID(),
+        },
+      }
+    );
   }
 
   private async evaluateAuth(authCode?: string) {
