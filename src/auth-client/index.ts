@@ -6,8 +6,8 @@ import jsonwebtoken, { JwtPayload } from 'jsonwebtoken';
 import Logger from '@ftim/logger';
 const logger = Logger.ns('Auth');
 
-import { EBaseUrl, EIntuitHeaderName, EMagicValues, ETokenGrantType, defaultHeaders } from './constants';
-import { EAuthChallengeType, TAuthorizationCache, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './types';
+import { EBaseUrl, EIntuitHeaderName, EMagicValues, ETokenGrantType, defaultHeaders } from './_constants';
+import { EAuthChallengeType, TAuthorizationCache, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './_types';
 
 export class AuthClient {
   private deviceId: string = randomUUID();
