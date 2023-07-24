@@ -6,10 +6,20 @@ import { MobileMintClient } from './mobile-mint-client';
 
 const { username, password, } = JSON.parse(fs.readFileSync('./.test-credentials.json', 'utf-8'));
 
-const sessionStore = new SessionStore(username, password);
+const sessionStore = new SessionStore({
+  identifier: username,
+  secret: password,
+});
 
-const authClient = new AuthClient(sessionStore, username, password);
+const authClient = new AuthClient({
+  sessionStore,
+  username,
+  password,
+});
 
-const mobileMintClient = new MobileMintClient(sessionStore, authClient);
+const mobileMintClient = new MobileMintClient({
+  sessionStore,
+  authClient,
+});
 
-mobileMintClient.init().then(() => { debugger; });
+mobileMintClient.getCategories().then((categories) => { debugger; });

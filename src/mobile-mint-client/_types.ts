@@ -17,3 +17,31 @@ export type TRegisterDeviceIdResponse = {
   currentVersion: string,
   token: string,
 };
+
+export type TCategory = {
+  id: number,
+  categoryType: string,
+  depth: number,
+  categoryName: string,
+  notificationName: string,
+  parentId: number,
+  precedence: number,
+  standard: boolean,
+  modified: number,
+  isBusiness: boolean,
+  categoryFamily: string
+};
+
+export type TProcessRequestType<K extends string, P extends object, R extends object> = {
+  responseKey: K,
+  payload: P,
+  response: R
+};
+
+export type TProcessRequestTypes = {
+  getCategories: TProcessRequestType<
+    'categoriesResponse',
+    { includeDeletedCategories: boolean, modifiedFrom: string },
+    { entries: TCategory[] }
+  >
+};

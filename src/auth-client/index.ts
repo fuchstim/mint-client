@@ -8,6 +8,15 @@ import { EBaseUrl, EIntuitHeaderName, EMagicValues, ETokenGrantType, defaultHead
 import { EAuthChallengeType, TAuthEvents, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './_types';
 import { TypedEventEmitter } from '@ftim/typed-event-emitter';
 import { SessionStore } from '../common/session-store';
+import { Lock } from '../common/lock';
+
+export type TAuthClientOptions = {
+  sessionStore: SessionStore
+  username: string,
+  password: string,
+};
+
+const AUTH_CLIENT_LOCK = new Lock('auth-client');
 
 export class AuthClient extends TypedEventEmitter<TAuthEvents> {
   private deviceId: string = randomUUID();
@@ -18,7 +27,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
 
   private authorizationCode?: TOAuthAuthorizationCodeResponse;
 
-  constructor(sessionStore: SessionStore, username: string, password: string) {
+  constructor({ sessionStore, username, password, }: TAuthClientOptions) {
     super();
 
     this.sessionStore = sessionStore;
@@ -48,36 +57,40 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
 
   async getAccessToken() {
     if (!this.authorizationCode || this.refreshTokenExpiresAt < new Date()) {
-      this.authorizationCode = await this.authenticate();
+      this.authorizationCode = await AUTH_CLIENT_LOCK.runWithLock(
+        () => this.authenticate()
+      );
 
       this.emit('authenticated', this.authorizationCode);
 
       this.sessionStore.set('auth', {
         deviceId: this.deviceId,
         refreshToken: this.authorizationCode.refresh_token,
-        refreshTokenExpiresAt: this.authorizationCode.refresh_token_expires_at.getTime(),
+        refreshTokenExpiresAt: this.refreshTokenExpiresAt.getTime(),
       });
     }
 
     if (this.accessTokenExpiresAt < new Date()) {
-      await this.refreshAuthorizationCode(this.authorizationCode.refresh_token)
-        .then(authorizationCode => {
-          this.authorizationCode = authorizationCode;
+      await AUTH_CLIENT_LOCK.runWithLock(
+        () => this.refreshAuthorizationCode(this.authorizationCode?.refresh_token ?? '')
+          .then(authorizationCode => {
+            this.authorizationCode = authorizationCode;
 
-          this.emit('authorizationCodeRefreshed', this.authorizationCode);
-        })
-        .catch(async error => {
-          logger.error('Failed to refresh authorization code', error);
+            this.emit('authorizationCodeRefreshed', this.authorizationCode);
+          })
+          .catch(async error => {
+            logger.error('Failed to refresh authorization code', error);
 
-          this.authorizationCode = await this.authenticate(true);
+            this.authorizationCode = await this.authenticate(true);
 
-          this.emit('authenticated', this.authorizationCode);
-        });
+            this.emit('authenticated', this.authorizationCode);
+          })
+      );
 
       this.sessionStore.set('auth', {
         deviceId: this.deviceId,
         refreshToken: this.authorizationCode.refresh_token,
-        refreshTokenExpiresAt: this.authorizationCode.refresh_token_expires_at.getTime(),
+        refreshTokenExpiresAt: this.refreshTokenExpiresAt.getTime(),
       });
     }
 
@@ -87,7 +100,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
   private async authenticate(bypassSessionStore = false) {
     logger.info('Authenticating...');
 
-    if (bypassSessionStore) {
+    if (!bypassSessionStore) {
       const hydratedAuthorizationCode = await this.hydrateFromSessionStore();
       if (hydratedAuthorizationCode) {
         return hydratedAuthorizationCode;
@@ -156,7 +169,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
 
     return {
       ...data,
-      refresh_token_expires_at: new Date(Date.now() + data.x_refresh_token_expires_in),
+      refresh_token_expires_at: new Date(Date.now() + (data.x_refresh_token_expires_in * 1_000)),
     };
   }
 
@@ -168,7 +181,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
 
     return {
       ...data,
-      refresh_token_expires_at: new Date(Date.now() + data.x_refresh_token_expires_in),
+      refresh_token_expires_at: new Date(Date.now() + (data.x_refresh_token_expires_in * 1_000)),
     };
   }
 

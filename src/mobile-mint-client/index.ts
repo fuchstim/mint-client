@@ -1,21 +1,34 @@
 import axios, { AxiosInstance } from 'axios';
+
 import Logger from '@ftim/logger';
 const logger = Logger.ns('MobileMint');
 
+import { CookieStore } from '../common/cookie-store';
+import { SessionStore } from '../common/session-store';
+import { Lock } from '../common/lock';
+import dayjs from '../common/dayjs';
+
 import type { AuthClient } from '../auth-client';
 import { BASE_URL, defaultHeaders } from './_constants';
-import { CookieStore } from '../common/cookie-store';
-import { TGetNewUuidResponse, TRegisterDeviceIdResponse } from './_types';
-import { SessionStore } from '../common/session-store';
+import { TGetNewUuidResponse, TProcessRequestTypes, TRegisterDeviceIdResponse } from './_types';
+
+export type TMobileMintClientOptions = {
+  sessionStore: SessionStore,
+  authClient: AuthClient,
+};
+
+const MOBILE_MINT_CLIENT_LOCK = new Lock('mobile-mint-client');
 
 export class MobileMintClient {
   private sessionStore: SessionStore;
   private authClient: AuthClient;
   private client: AxiosInstance;
   private cookieStore: CookieStore = new CookieStore();
+
+  private userId?: string;
   private deviceId?: string;
 
-  constructor(sessionStore: SessionStore, authClient: AuthClient) {
+  constructor({ sessionStore, authClient, }: TMobileMintClientOptions) {
     this.sessionStore = sessionStore;
     this.authClient = authClient;
 
@@ -28,17 +41,46 @@ export class MobileMintClient {
 
     this.client.interceptors.request.use(this.cookieStore.requestInterceptor);
     this.client.interceptors.response.use(this.cookieStore.responseInterceptor);
+
+    this.client.interceptors.request.use(async request => {
+      if (!this.userId) { return request; }
+
+      const accessToken = await this.authClient.getAccessToken();
+
+      request.headers.set('Authorization', `Bearer ${accessToken}`);
+      request.headers.set('mint-userid', this.userId);
+
+      return request;
+    });
+
+    const initInterceptor = this.client.interceptors.request.use(async request => {
+      this.client.interceptors.request.eject(initInterceptor);
+
+      await MOBILE_MINT_CLIENT_LOCK.runWithLock(async () => {
+        if (this.userId) { return; }
+
+        await this.init();
+      });
+
+      return request;
+    });
   }
 
-  private set userId(userId: string) {
-    this.client.defaults.headers['mint-userid'] = userId;
+  async getUserProfile() {
+
   }
 
-  private get userId(): string | undefined {
-    return this.client.defaults.headers['mint-userid'] as string | undefined;
+  async getCategories() {
+    const categories = await this.processRequest(
+      'getCategories',
+      'categoriesResponse',
+      { includeDeletedCategories: true, modifiedFrom: '0', }
+    );
+
+    return categories.entries;
   }
 
-  async init(bypassSessionStore = false) {
+  private async init(bypassSessionStore = false) {
     logger.info('Initializing...');
 
     if (!bypassSessionStore) {
@@ -53,14 +95,6 @@ export class MobileMintClient {
     await this.initCookieStore();
 
     this.deviceId = await this.getDeviceId();
-
-    this.client.interceptors.request.use(async request => {
-      const accessToken = await this.authClient.getAccessToken();
-
-      request.headers.set('Authorization', `Bearer ${accessToken}`);
-
-      return request;
-    });
 
     this.userId = await this.registerDeviceId(this.deviceId);
 
@@ -114,18 +148,18 @@ export class MobileMintClient {
     const payload = {
       deviceUniq: deviceId,
 
-      deviceModelID: 'iPhone15,2',
-      version: '150.70.0',
-      protocol: '150.70.0',
-      clientType: 'Mint',
-      deviceSysVersion: '16.5.1',
-      deviceModel: 'iPhone',
-      deviceName: 'iPhone',
-      platform: 'iphone',
-      demo: 'false',
       buildNumber: '1.24203',
-      deviceSysName: 'iOS',
+      clientType: 'Mint',
+      demo: 'false',
       deviceLocalModel: 'iPhone',
+      deviceModel: 'iPhone',
+      deviceModelID: 'iPhone15,2',
+      deviceName: 'iPhone',
+      deviceSysName: 'iOS',
+      deviceSysVersion: '16.5.1',
+      platform: 'iphone',
+      protocol: '150.70.0',
+      version: '150.70.0',
     };
 
     const { data, } = await this.client.post<TRegisterDeviceIdResponse>(
@@ -151,18 +185,18 @@ export class MobileMintClient {
       deviceUniq: deviceId,
       deviceToken: userId,
 
-      deviceModelID: 'iPhone15,2',
-      version: '150.70.0',
-      protocol: '150.70.0',
-      clientType: 'Mint',
-      deviceSysVersion: '16.5.1',
-      deviceModel: 'iPhone',
-      deviceName: 'iPhone',
-      platform: 'iphone',
-      demo: 'false',
       buildNumber: '1.24203',
-      deviceSysName: 'iOS',
+      clientType: 'Mint',
+      demo: 'false',
       deviceLocalModel: 'iPhone',
+      deviceModel: 'iPhone',
+      deviceModelID: 'iPhone15,2',
+      deviceName: 'iPhone',
+      deviceSysName: 'iOS',
+      deviceSysVersion: '16.5.1',
+      platform: 'iphone',
+      protocol: '150.70.0',
+      version: '150.70.0',
     };
 
     await this.client.post(
@@ -190,5 +224,38 @@ export class MobileMintClient {
     this.deviceId = deviceId;
 
     return true;
+  }
+
+  private async processRequest<T extends keyof TProcessRequestTypes>(
+    requestType: T,
+    responseKey: TProcessRequestTypes[T]['responseKey'],
+    payload?: TProcessRequestTypes[T]['payload']
+  ): Promise<TProcessRequestTypes[T]['response']> {
+    const params = {
+      clientID: this.deviceId,
+
+      apiProtocol: '150.70.0',
+      buildNumber: '1.24203',
+      clientType: 'Mint',
+      clientVersion: '150.70.0',
+      deviceModel: 'iPhone',
+      deviceName: 'iPhone',
+      platform: 'iPhone',
+      systemName: 'iOS',
+      systemVersion: '16.5.1',
+    };
+
+    const { data, } = await this.client.post(
+      'processRequest.xevent',
+      {
+        [requestType]: {
+          requestID: `${requestType} request ${dayjs().format('YYYY-MM-DD, H:mm:ss A z')}`,
+          ...payload,
+        },
+      },
+      { params, }
+    );
+
+    return data[responseKey] as TProcessRequestTypes[T]['response'];
   }
 }

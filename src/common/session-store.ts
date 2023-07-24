@@ -18,13 +18,18 @@ export type TSessionStore = {
   }
 };
 
+export type TSessionStoreOptions = {
+  identifier: string,
+  secret: string,
+};
+
 export class SessionStore {
   private identifier: string;
   private secret: string;
 
   private store: TSessionStore;
 
-  constructor(identifier: string, secret: string) {
+  constructor({ identifier, secret, }: TSessionStoreOptions) {
     this.identifier = identifier;
     this.secret = secret;
 
