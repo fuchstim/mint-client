@@ -22,4 +22,6 @@ const mobileMintClient = new MobileMintClient({
   authClient,
 });
 
-mobileMintClient.getCategories().then((categories) => { debugger; });
+mobileMintClient.getTransactions()
+  .then(result => { debugger; })
+  .catch(error => { debugger; });

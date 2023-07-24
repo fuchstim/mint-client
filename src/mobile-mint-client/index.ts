@@ -9,8 +9,8 @@ import { Lock } from '../common/lock';
 import dayjs from '../common/dayjs';
 
 import type { AuthClient } from '../auth-client';
-import { BASE_URL, defaultHeaders } from './_constants';
-import { TGetNewUuidResponse, TProcessRequestTypes, TRegisterDeviceIdResponse } from './_types';
+import { BASE_URL, defaultHeaders, defaultMQPPRequestParams, defaultMQPPRequestPayload } from './_constants';
+import { TGetNewUuidResponse, TMMQPBundledRequestTypes, TMMQPRequestTypes, TProcessRequestTypes } from './_types';
 
 export type TMobileMintClientOptions = {
   sessionStore: SessionStore,
@@ -67,7 +67,20 @@ export class MobileMintClient {
   }
 
   async getUserProfile() {
+    const userProfile = await this.processMMQPRequest(
+      'UserData_primary',
+      'mobileData.xevent',
+      {
+        deviceUniq: this.deviceId!,
+        countAsLogin: false,
+        isManualTransactionsRequest: true,
+        getBudgets: false,
+        dataType: 'primary',
+        allBudgets: true,
+      }
+    );
 
+    return userProfile;
   }
 
   async getCategories() {
@@ -77,7 +90,23 @@ export class MobileMintClient {
       { includeDeletedCategories: true, modifiedFrom: '0', }
     );
 
-    return categories.entries;
+    return categories;
+  }
+
+  async getTransactions() {
+    const transactions = await this.processBundledMMQPRequest(
+      'fetchModifiedTransactions',
+      'getModifiedTransactions',
+      'MintUserMobileService',
+      {
+        visibleDateFrom: 1688626800000,
+        visibleDateTo: 1689984000000,
+        accountIDs: [ 2460887, 2460886, 2460888, ],
+        maxCount: 100,
+      }
+    );
+
+    return transactions;
   }
 
   private async init(bypassSessionStore = false) {
@@ -136,73 +165,24 @@ export class MobileMintClient {
   }
 
   private async registerDeviceId(deviceId: string) {
-    logger.info(`Regisering device id ${deviceId}...`);
+    logger.info(`Registering device id ${deviceId}...`);
 
-    const params = {
-      MMQP_platform: 'iPhone',
-      MMQP_protocol: '150.70.0',
-      MMQP_version: '150.70.0',
-      MMQP_request: 'registerUser',
-    };
-
-    const payload = {
-      deviceUniq: deviceId,
-
-      buildNumber: '1.24203',
-      clientType: 'Mint',
-      demo: 'false',
-      deviceLocalModel: 'iPhone',
-      deviceModel: 'iPhone',
-      deviceModelID: 'iPhone15,2',
-      deviceName: 'iPhone',
-      deviceSysName: 'iOS',
-      deviceSysVersion: '16.5.1',
-      platform: 'iphone',
-      protocol: '150.70.0',
-      version: '150.70.0',
-    };
-
-    const { data, } = await this.client.post<TRegisterDeviceIdResponse>(
+    const { userId, } = await this.processMMQPRequest(
+      'registerUser',
       'mobileLogin.xevent',
-      new URLSearchParams(payload).toString(),
-      { params, }
+      { deviceUniq: deviceId, }
     );
 
-    logger.info(`Registered device ${deviceId}. Retrieved user id ${data.userId}`);
+    logger.info(`Registered device ${deviceId}. Retrieved user id ${userId}`);
 
-    return String(data.userId);
+    return String(userId);
   }
 
   private async submitDeviceToken(deviceId: string, userId: string) {
-    const params = {
-      MMQP_platform: 'iPhone',
-      MMQP_protocol: '150.70.0',
-      MMQP_version: '150.70.0',
-      MMQP_request: 'submitToken',
-    };
-
-    const payload = {
-      deviceUniq: deviceId,
-      deviceToken: userId,
-
-      buildNumber: '1.24203',
-      clientType: 'Mint',
-      demo: 'false',
-      deviceLocalModel: 'iPhone',
-      deviceModel: 'iPhone',
-      deviceModelID: 'iPhone15,2',
-      deviceName: 'iPhone',
-      deviceSysName: 'iOS',
-      deviceSysVersion: '16.5.1',
-      platform: 'iphone',
-      protocol: '150.70.0',
-      version: '150.70.0',
-    };
-
-    await this.client.post(
+    await this.processMMQPRequest(
+      'submitToken',
       'mobileSubmitDeviceToken.xevent',
-      new URLSearchParams(payload).toString(),
-      { params, }
+      { deviceUniq: deviceId, deviceToken: userId, }
     );
   }
 
@@ -226,10 +206,59 @@ export class MobileMintClient {
     return true;
   }
 
+  private async processMMQPRequest<T extends keyof TMMQPRequestTypes>(
+    requestType: T,
+    endpoint: TMMQPRequestTypes[T]['endpoint'],
+    payload: TMMQPRequestTypes[T]['payload']
+  ): Promise<TMMQPRequestTypes[T]['response']> {
+    const params = {
+      ...defaultMQPPRequestParams,
+      MMQP_request: requestType,
+    };
+
+    const formData = new URLSearchParams();
+    for (const [ key, value, ] of Object.entries({ ...defaultMQPPRequestPayload, ...payload, })) {
+      formData.append(key, String(value));
+    }
+
+    const { data, } = await this.client.post<TMMQPRequestTypes[T]['response']>(
+      endpoint,
+      formData.toString(),
+      { params, }
+    );
+
+    return data;
+  }
+
+  private async processBundledMMQPRequest<T extends keyof TMMQPBundledRequestTypes>(
+    requestType: T,
+    task: TMMQPBundledRequestTypes[T]['task'],
+    service: TMMQPBundledRequestTypes[T]['service'],
+    args: TMMQPBundledRequestTypes[T]['args']
+  ) {
+    const request = {
+      id: String(Date.now()),
+      args,
+      task,
+      service,
+    };
+
+    const result = await this.processMMQPRequest(
+      requestType,
+      'mobileBundledService.xevent',
+      {
+        deviceUniq: this.deviceId!,
+        input: JSON.stringify([ request, ]),
+      }
+    );
+
+    debugger;
+  }
+
   private async processRequest<T extends keyof TProcessRequestTypes>(
     requestType: T,
     responseKey: TProcessRequestTypes[T]['responseKey'],
-    payload?: TProcessRequestTypes[T]['payload']
+    payload: TProcessRequestTypes[T]['payload']
   ): Promise<TProcessRequestTypes[T]['response']> {
     const params = {
       clientID: this.deviceId,
