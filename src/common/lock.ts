@@ -22,7 +22,7 @@ export class Lock {
     this.name = name;
   }
 
-  async acquire(durationMs = 5_000, timeoutMs = 10_000) {
+  async acquire(durationMs = 5_000, timeoutMs = 600_000) {
     const lockId = randomUUID();
     const lockLogger = logger.ns(this.name, lockId);
 
