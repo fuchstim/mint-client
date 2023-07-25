@@ -235,7 +235,7 @@ export class MobileMintClient {
     task: TMMQPBundledRequestTypes[T]['task'],
     service: TMMQPBundledRequestTypes[T]['service'],
     args: TMMQPBundledRequestTypes[T]['args']
-  ) {
+  ): Promise<TMMQPBundledRequestTypes[T]['response']['response'][string]['response']> {
     const request = {
       id: String(Date.now()),
       args,
@@ -252,7 +252,7 @@ export class MobileMintClient {
       }
     );
 
-    debugger;
+    return result.response[request.id].response;
   }
 
   private async processRequest<T extends keyof TProcessRequestTypes>(

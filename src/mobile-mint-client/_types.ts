@@ -161,21 +161,38 @@ export type TMMQPRequestTypes = TMMQPBundledRequestTypes & {
   >,
 };
 
-export type TMMQBundledRequestType<A, T extends string, S extends string> = TMMQPRequestType<
+export type TMMQBundledRequestType<T extends string, S extends string, A, R> = TMMQPRequestType<
   'mobileBundledService.xevent',
   { input: string, deviceUniq: string },
-  { versionValidity: string, responseType: string, response: Record<string, unknown> }
+  {
+    versionValidity: string,
+    responseType: string,
+    response: Record<
+      string,
+      { duration: number, responseType: string, callStatus: string, response: R }
+    >
+  }
 > & {
   args: A,
   task: T,
-  service: S
+  service: S,
 };
 
 export type TMMQPBundledRequestTypes = {
   fetchModifiedTransactions: TMMQBundledRequestType<
-    { visibleDateFrom?: number, visibleDateTo?: number, accountIDs: number[], maxCount: number },
     'getModifiedTransactions',
-    'MintUserMobileService'
+    'MintUserMobileService',
+    { visibleDateFrom?: number, visibleDateTo?: number, accountIDs: number[], maxCount: number },
+    {
+      visibleDateFrom: number,
+      visibleDateTo: number,
+      hasEarlierTransactions: boolean,
+      totalCountInFullResult: number,
+      modifiedFrom: number | null,
+      transactions: unknown[],
+      earliestVisibleDateInFullResult: number,
+      modifiedTo: number,
+     }
   >
 };
 
