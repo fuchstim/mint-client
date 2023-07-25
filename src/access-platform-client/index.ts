@@ -122,7 +122,11 @@ export class AccessPlatformClient {
     let authContextId: string | undefined;
     let authCode: string | undefined;
     for (let i = 0; i < MAX_AUTH_ATTEMPTS; i++) {
-      const evalResult = await this.evaluateAuth(flowId, deviceId, clientId, clientSecret, authCode);
+      const { access_token: accessToken, } = authCode
+        ? await oauthClient.createAuthorizationCode(deviceId, clientId, clientSecret, authCode)
+        : await oauthClient.createClientCredentials(deviceId, clientId, clientSecret);
+
+      const evalResult = await this.evaluateAuth(flowId, deviceId, clientId, accessToken);
       if (evalResult.action === 'PASS') {
         const authorizationCode = await oauthClient.createAuthorizationCode(
           deviceId,
@@ -141,6 +145,10 @@ export class AccessPlatformClient {
 
       authContextId = authContextId ?? evalResult.authContextId;
       if (!authContextId) {
+        // TODO: Support CAPTCHA
+        // On captcha, open https://accounts.intuit.com/recaptcha-native.html?offering_id=Intuit.ifs.mint.3&redirect_url=https://oauth2.intuit.com/nativeredirect/v1&locale=en-ca
+        // Then solve captcha, and extract captcha_token from redirect url params
+        // Lastly, call evaluateAuth with same accessToken and header intuit_captcha_response: captcha_token
         throw new Error('Missing auth context id');
       }
 
@@ -148,7 +156,7 @@ export class AccessPlatformClient {
         flowId,
         deviceId,
         clientId,
-        clientSecret,
+        accessToken,
         authContextId,
         evalResult.challenge
       );
@@ -161,7 +169,7 @@ export class AccessPlatformClient {
     flowId: string,
     deviceId: string,
     clientId: string,
-    clientSecret: string,
+    accessToken: string,
     authContextId: string,
     availableChallenges: TAuthChallenge[]
   ) {
@@ -182,7 +190,7 @@ export class AccessPlatformClient {
           flowId,
           deviceId,
           clientId,
-          clientSecret,
+          accessToken,
           authContextId
         );
       case EAuthChallengeType.TOTP:
@@ -192,15 +200,13 @@ export class AccessPlatformClient {
           flowId,
           deviceId,
           clientId,
-          clientSecret,
+          accessToken,
           authContextId,
           challenge.type
         );
     }
 
-    debugger;
-
-    return 'bingus';
+    throw new Error(`Unsupported challenge type: ${challenge.type}`);
   }
 
   private createSessionFromAuthorizationCode(
@@ -250,13 +256,8 @@ export class AccessPlatformClient {
     flowId: string,
     deviceId: string,
     clientId: string,
-    clientSecret: string,
-    authCode?: string
+    accessToken: string
     ) {
-    const { access_token, } = authCode
-      ? await oauthClient.createAuthorizationCode(deviceId, clientId, clientSecret, authCode)
-      : await oauthClient.createClientCredentials(deviceId, clientId, clientSecret);
-
     logger.info(`Evaluating auth for ${this.username}...`);
 
     const payload = {
@@ -290,7 +291,7 @@ export class AccessPlatformClient {
       payload,
       {
         headers: {
-          Authorization: `Bearer ${access_token}`,
+          Authorization: `Bearer ${accessToken}`,
           [EIntuitHeaderName.DEVICE_ID]: deviceId,
           [EIntuitHeaderName.FLOW_ID]: flowId,
           [EIntuitHeaderName.ACCEPT_AUTH_CHALLENGE]: 'sms_otp voice_otp email_otp totp password pwd_reset collect_password collect_recovery_phone collect_confirm_recovery_phone collect_recovery_email collect_recovery_email_or_phone post_auth_challenges consent_7216_ty18 username_reset select_account ar_oow_kba captcha care',
@@ -307,14 +308,14 @@ export class AccessPlatformClient {
     flowId: string,
     deviceId: string,
     clientId: string,
-    clientSecret: string,
+    accessToken: string,
     authContextId: string
   ) {
     const result = await this.submitChallenge(
       flowId,
       deviceId,
       clientId,
-      clientSecret,
+      accessToken,
       authContextId,
       EAuthChallengeType.PASSWORD,
       this.password
@@ -336,7 +337,7 @@ export class AccessPlatformClient {
     flowId: string,
     deviceId: string,
     clientId: string,
-    clientSecret: string,
+    accessToken: string,
     authContextId: string,
     type: EAuthChallengeType
   ) {
@@ -344,8 +345,7 @@ export class AccessPlatformClient {
       await this.requestOTPToken(
         flowId,
         deviceId,
-        clientId,
-        clientSecret,
+        accessToken,
         authContextId,
         type
       );
@@ -357,13 +357,11 @@ export class AccessPlatformClient {
       flowId,
       deviceId,
       clientId,
-      clientSecret,
+      accessToken,
       authContextId,
       type,
       token
     );
-
-    debugger;
 
     return result.oauth2CodeResponse.code;
   }
@@ -372,19 +370,15 @@ export class AccessPlatformClient {
     flowId: string,
     deviceId: string,
     clientId: string,
-    clientSecret: string,
+    accessToken: string,
     authContextId: string,
     type: EAuthChallengeType,
     value: string
   ) {
-    const { access_token, } = await oauthClient.createClientCredentials(deviceId, clientId, clientSecret);
-
     logger.info(`Submitting challenge for ${type}...`);
 
     const payload = {
-      challengeToken: [
-        { type, value, },
-      ],
+      challengeToken: [ { type, value, }, ],
       oauth2CodeRequest: { clientId, redirectUri: EMagicValues.OAUTH_REDIRECT_URI, },
     };
 
@@ -393,7 +387,7 @@ export class AccessPlatformClient {
       payload,
       {
         headers: {
-          Authorization: `Bearer ${access_token}`,
+          Authorization: `Bearer ${accessToken}`,
           [EIntuitHeaderName.DEVICE_ID]: deviceId,
           [EIntuitHeaderName.AUTH_CONTEXT_ID]: authContextId,
           [EIntuitHeaderName.FLOW_ID]: flowId,
@@ -410,13 +404,10 @@ export class AccessPlatformClient {
   private async requestOTPToken(
     flowId: string,
     deviceId: string,
-    clientId: string,
-    clientSecret: string,
+    accessToken: string,
     authContextId: string,
     type: EAuthChallengeType
     ) {
-    const { access_token, } = await oauthClient.createClientCredentials(deviceId, clientId, clientSecret);
-
     logger.info(`Requesting ${type} type OTP...`);
 
     const payload = {
@@ -430,13 +421,15 @@ export class AccessPlatformClient {
       payload,
       {
         headers: {
-          Authorization: `Bearer ${access_token}`,
+          Authorization: `Bearer ${accessToken}`,
           [EIntuitHeaderName.DEVICE_ID]: deviceId,
           [EIntuitHeaderName.AUTH_CONTEXT_ID]: authContextId,
           [EIntuitHeaderName.FLOW_ID]: flowId,
         },
       }
-    );
+    )
+      .then(result => { debugger; })
+      .catch(error => { debugger; });
   }
 
   private hydrateSession() {
