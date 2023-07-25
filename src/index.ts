@@ -1,7 +1,7 @@
 import fs from 'fs';
 
 import { SessionStore } from './common/session-store';
-import { AuthClient } from './auth-client';
+import { AccessPlatformClient } from './access-platform-client';
 import { MobileMintClient } from './mobile-mint-client';
 
 const { username, password, } = JSON.parse(fs.readFileSync('./.test-credentials.json', 'utf-8'));
@@ -11,7 +11,7 @@ const sessionStore = new SessionStore({
   secret: password,
 });
 
-const authClient = new AuthClient({
+const accessPlatformClient = new AccessPlatformClient({
   sessionStore,
   username,
   password,
@@ -19,7 +19,7 @@ const authClient = new AuthClient({
 
 const mobileMintClient = new MobileMintClient({
   sessionStore,
-  authClient,
+  accessPlatformClient,
 });
 
 mobileMintClient.getTransactions()

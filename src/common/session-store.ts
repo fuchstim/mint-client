@@ -3,16 +3,11 @@ import fs from 'fs';
 
 import Logger from '@ftim/logger';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import { TSession } from '../access-platform-client/_types';
 const logger = Logger.ns('SessionStore');
 
 export type TSessionStore = {
-  auth?: {
-    deviceId: string,
-    clientId: string,
-    clientSecret: string,
-    refreshToken: string,
-    refreshTokenExpiresAt: number,
-  },
+  auth?: TSession,
   mobileMint?: {
     deviceId: string,
     userId: string,

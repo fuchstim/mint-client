@@ -8,29 +8,29 @@ import { SessionStore } from '../common/session-store';
 import { Lock } from '../common/lock';
 import dayjs from '../common/dayjs';
 
-import type { AuthClient } from '../auth-client';
+import type { AccessPlatformClient } from '../access-platform-client';
 import { BASE_URL, defaultHeaders, defaultMQPPRequestParams, defaultMQPPRequestPayload } from './_constants';
 import { TGetNewUuidResponse, TMMQPBundledRequestTypes, TMMQPRequestTypes, TProcessRequestTypes } from './_types';
 
 export type TMobileMintClientOptions = {
   sessionStore: SessionStore,
-  authClient: AuthClient,
+  accessPlatformClient: AccessPlatformClient,
 };
 
 const MOBILE_MINT_CLIENT_LOCK = new Lock('mobile-mint-client');
 
 export class MobileMintClient {
   private sessionStore: SessionStore;
-  private authClient: AuthClient;
+  private accessPlatformClient: AccessPlatformClient;
   private client: AxiosInstance;
   private cookieStore: CookieStore = new CookieStore();
 
   private userId?: string;
   private deviceId?: string;
 
-  constructor({ sessionStore, authClient, }: TMobileMintClientOptions) {
+  constructor({ sessionStore, accessPlatformClient, }: TMobileMintClientOptions) {
     this.sessionStore = sessionStore;
-    this.authClient = authClient;
+    this.accessPlatformClient = accessPlatformClient;
 
     this.client = axios.create({
       baseURL: BASE_URL,
@@ -45,7 +45,7 @@ export class MobileMintClient {
     this.client.interceptors.request.use(async request => {
       if (!this.deviceId) { return request; }
 
-      const accessToken = await this.authClient.getAccessToken();
+      const accessToken = await this.accessPlatformClient.getAccessToken();
 
       request.headers.set('Authorization', `Bearer ${accessToken}`);
       request.headers.set('mint-userid', this.userId);
@@ -146,7 +146,7 @@ export class MobileMintClient {
     await this.client.post(
       'getUserPod.xevent',
       new URLSearchParams({
-        username: this.authClient.getUsername(),
+        username: this.accessPlatformClient.getUsername(),
         clientType: 'Mint',
       }).toString()
     );
