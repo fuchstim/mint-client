@@ -16,16 +16,16 @@ const accessPlatformClient = new AccessPlatformClient({
   sessionStore,
   username,
   password,
-  otpProvider: async type => {
-    const { token, } = await prompts([
+  userInputProvider: async type => {
+    const { input, } = await prompts([
       {
         type: 'text',
-        name: 'token',
-        message: `Enter ${type} token`,
+        name: 'input',
+        message: `Enter ${type}`,
       },
     ]);
 
-    return token;
+    return input;
   },
 });
 

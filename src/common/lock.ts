@@ -26,13 +26,11 @@ export class Lock {
     const lockId = randomUUID();
     const lockLogger = logger.ns(this.name, lockId);
 
-    lockLogger.debug('Acquiring lock...');
-
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         clearInterval(interval);
 
-        logger.error(`Failed to acquire lock ${this.name} within ${timeoutMs}ms`);
+        lockLogger.error(`Failed to acquire lock within ${timeoutMs}ms`);
 
         reject(new Error(`Failed to acquire lock ${this.name} within ${timeoutMs}ms`));
       }, timeoutMs);
@@ -53,22 +51,16 @@ export class Lock {
 
     });
 
-    lockLogger.debug('Lock acquired');
-
     return {
       id: lockId,
       release: () => {
         if (ACTIVE_LOCKS[this.name]?.id === lockId) {
           delete ACTIVE_LOCKS[this.name];
-
-          lockLogger.debug('Lock released');
         }
       },
       renew: () => {
         if (ACTIVE_LOCKS[this.name]?.id === lockId) {
           ACTIVE_LOCKS[this.name].expiresAt = new Date(Date.now() + durationMs);
-
-          lockLogger.debug('Lock renewed');
         }
       },
     };

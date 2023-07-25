@@ -43,7 +43,7 @@ export type TAttribute = { key: string, value: string };
 
 export type TEvaluateAuthResponse =
   | ({ action: 'PASS', attributes: TAttribute[] } & TVerifySignInResponse)
-  | { action: 'CHALLENGE', authContextId?: string, attributes: TAttribute[], challenge: TAuthChallenge[] };
+  | ({ action: 'CHALLENGE', authContextId?: string, attributes: TAttribute[], challenge: TAuthChallenge[] } & Partial<TVerifySignInResponse>);
 
 export type TSession = {
   deviceId: string,

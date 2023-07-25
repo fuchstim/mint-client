@@ -15,7 +15,7 @@ export type TAuthClientOptions = {
   sessionStore: SessionStore
   username: string,
   password: string,
-  otpProvider: (type: EAuthChallengeType) => Promise<string>,
+  userInputProvider: (type: string) => Promise<string>,
 };
 
 const ACCESS_PLATFORM_CLIENT_LOCK = new Lock('access-platform-client');
@@ -24,16 +24,16 @@ export class AccessPlatformClient {
   private sessionStore: TAuthClientOptions['sessionStore'];
   private username: TAuthClientOptions['username'];
   private password: TAuthClientOptions['password'];
-  private otpProvider: TAuthClientOptions['otpProvider'];
+  private userInputProvider: TAuthClientOptions['userInputProvider'];
 
   private client: AxiosInstance;
   private session?: TSession;
 
-  constructor({ sessionStore, username, password, otpProvider, }: TAuthClientOptions) {
+  constructor({ sessionStore, username, password, userInputProvider, }: TAuthClientOptions) {
     this.sessionStore = sessionStore;
     this.username = username;
     this.password = password;
-    this.otpProvider = otpProvider;
+    this.userInputProvider = userInputProvider;
 
     this.client = axios.create({
       baseURL: BASE_URL,
@@ -121,12 +121,11 @@ export class AccessPlatformClient {
 
     let authContextId: string | undefined;
     let authCode: string | undefined;
+    let captchaToken: string | undefined;
     for (let i = 0; i < MAX_AUTH_ATTEMPTS; i++) {
-      const { access_token: accessToken, } = authCode
-        ? await oauthClient.createAuthorizationCode(deviceId, clientId, clientSecret, authCode)
-        : await oauthClient.createClientCredentials(deviceId, clientId, clientSecret);
+      const evalAccessToken = await this.createIntermediateAccessToken(deviceId, clientId, clientSecret, authCode);
 
-      const evalResult = await this.evaluateAuth(flowId, deviceId, clientId, accessToken);
+      const evalResult = await this.evaluateAuth(flowId, deviceId, clientId, evalAccessToken, captchaToken);
       if (evalResult.action === 'PASS') {
         const authorizationCode = await oauthClient.createAuthorizationCode(
           deviceId,
@@ -143,26 +142,52 @@ export class AccessPlatformClient {
         );
       }
 
+      if (evalResult.oauth2CodeResponse?.code) {
+        authCode = evalResult.oauth2CodeResponse.code;
+      }
+
+      captchaToken = undefined;
+
+      if (evalResult.challenge[0].type === EAuthChallengeType.CAPTCHA) {
+        logger.error('Solve captcha and enter captcha_token:');
+        logger.error('https://accounts.intuit.com/recaptcha-native.html?offering_id=Intuit.ifs.mint.3&redirect_url=https://oauth2.intuit.com/nativeredirect/v1&locale=en-ca');
+
+        captchaToken = await this.userInputProvider('captcha_token');
+
+        continue;
+      }
+
       authContextId = authContextId ?? evalResult.authContextId;
       if (!authContextId) {
-        // TODO: Support CAPTCHA
-        // On captcha, open https://accounts.intuit.com/recaptcha-native.html?offering_id=Intuit.ifs.mint.3&redirect_url=https://oauth2.intuit.com/nativeredirect/v1&locale=en-ca
-        // Then solve captcha, and extract captcha_token from redirect url params
-        // Lastly, call evaluateAuth with same accessToken and header intuit_captcha_response: captcha_token
         throw new Error('Missing auth context id');
       }
+
+      const challengeAccessToken = await this.createIntermediateAccessToken(deviceId, clientId, clientSecret, authCode);
 
       authCode = await this.attemptChallenge(
         flowId,
         deviceId,
         clientId,
-        accessToken,
+        challengeAccessToken,
         authContextId,
         evalResult.challenge
       );
     }
 
     throw new Error('Failed to create session');
+  }
+
+  private async createIntermediateAccessToken(
+    deviceId: string,
+    clientId: string,
+    clientSecret: string,
+    authCode?: string
+  ): Promise<string> {
+    const { access_token: accessToken, } = authCode
+      ? await oauthClient.createAuthorizationCode(deviceId, clientId, clientSecret, authCode)
+      : await oauthClient.createClientCredentials(deviceId, clientId, clientSecret);
+
+    return accessToken;
   }
 
   private async attemptChallenge(
@@ -256,7 +281,8 @@ export class AccessPlatformClient {
     flowId: string,
     deviceId: string,
     clientId: string,
-    accessToken: string
+    accessToken: string,
+    captchaToken?: string
     ) {
     logger.info(`Evaluating auth for ${this.username}...`);
 
@@ -295,6 +321,7 @@ export class AccessPlatformClient {
           [EIntuitHeaderName.DEVICE_ID]: deviceId,
           [EIntuitHeaderName.FLOW_ID]: flowId,
           [EIntuitHeaderName.ACCEPT_AUTH_CHALLENGE]: 'sms_otp voice_otp email_otp totp password pwd_reset collect_password collect_recovery_phone collect_confirm_recovery_phone collect_recovery_email collect_recovery_email_or_phone post_auth_challenges consent_7216_ty18 username_reset select_account ar_oow_kba captcha care',
+          [EIntuitHeaderName.CAPTCHA_RESPONSE]: captchaToken,
         },
       }
     );
@@ -351,7 +378,7 @@ export class AccessPlatformClient {
       );
     }
 
-    const token = await this.otpProvider(type);
+    const token = await this.userInputProvider(type);
 
     const result = await this.submitChallenge(
       flowId,
@@ -407,13 +434,11 @@ export class AccessPlatformClient {
     accessToken: string,
     authContextId: string,
     type: EAuthChallengeType
-    ) {
+  ) {
     logger.info(`Requesting ${type} type OTP...`);
 
     const payload = {
-      challengeToken: [
-        { type, },
-      ],
+      challengeToken: [ { type, }, ],
     };
 
     await this.client.post(
@@ -427,9 +452,7 @@ export class AccessPlatformClient {
           [EIntuitHeaderName.FLOW_ID]: flowId,
         },
       }
-    )
-      .then(result => { debugger; })
-      .catch(error => { debugger; });
+    );
   }
 
   private hydrateSession() {
