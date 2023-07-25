@@ -66,7 +66,7 @@ export class AccessPlatformClient {
 
     const expiresAt = decoded?.exp ?? 0;
 
-    return Date.now() > expiresAt * 1_000;
+    return Date.now() < expiresAt * 1_000;
   }
 
   getUsername() {

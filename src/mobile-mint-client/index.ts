@@ -19,6 +19,18 @@ export type TMobileMintClientOptions = {
 
 const MOBILE_MINT_CLIENT_LOCK = new Lock('mobile-mint-client');
 
+const UNAUTHENTICATED_PRE_INIT_ENDPOINTS = [
+  'testing.xevent',
+  'getUserPod.xevent',
+  'getNewUuid.xevent',
+];
+
+const PRE_INIT_ENDPOINTS = [
+  ...UNAUTHENTICATED_PRE_INIT_ENDPOINTS,
+  'mobileLogin.xevent',
+  'mobileSubmitDeviceToken.xevent',
+];
+
 export class MobileMintClient {
   private sessionStore: SessionStore;
   private accessPlatformClient: AccessPlatformClient;
@@ -43,7 +55,13 @@ export class MobileMintClient {
     this.client.interceptors.response.use(this.cookieStore.responseInterceptor);
 
     this.client.interceptors.request.use(async request => {
-      if (!this.deviceId) { return request; }
+      if (UNAUTHENTICATED_PRE_INIT_ENDPOINTS.includes(request.url!)) {
+        return request;
+      }
+
+      if (!this.isInitialized && !PRE_INIT_ENDPOINTS.includes(request.url!)) {
+        await this.initSafe();
+      }
 
       const accessToken = await this.accessPlatformClient.getAccessToken();
 
@@ -52,18 +70,10 @@ export class MobileMintClient {
 
       return request;
     });
+  }
 
-    const initInterceptor = this.client.interceptors.request.use(async request => {
-      this.client.interceptors.request.eject(initInterceptor);
-
-      await MOBILE_MINT_CLIENT_LOCK.runWithLock(async () => {
-        if (this.userId) { return; }
-
-        await this.init();
-      });
-
-      return request;
-    });
+  get isInitialized() {
+    return Boolean(this.userId);
   }
 
   async getUserProfile() {
@@ -93,32 +103,38 @@ export class MobileMintClient {
     return categories;
   }
 
-  async getTransactions() {
+  async getTransactions(accountIds: number[], fromDate: Date, toDate: Date, limit: number) {
     const transactions = await this.processBundledMMQPRequest(
       'fetchModifiedTransactions',
       'getModifiedTransactions',
       'MintUserMobileService',
       {
-        visibleDateFrom: 1688626800000,
-        visibleDateTo: 1689984000000,
-        accountIDs: [ 2460887, 2460886, 2460888, ],
-        maxCount: 100,
+        visibleDateFrom: fromDate.getTime(),
+        visibleDateTo: toDate.getTime(),
+        accountIDs: accountIds,
+        maxCount: limit,
       }
     );
 
     return transactions;
   }
 
-  private async init(bypassSessionStore = false) {
+  private async initSafe() {
+    await MOBILE_MINT_CLIENT_LOCK.runWithLock(async () => {
+      if (this.isInitialized) { return; }
+
+      await this.init();
+    });
+  }
+
+  private async init() {
     logger.info('Initializing...');
 
-    if (!bypassSessionStore) {
-      const hydrationSuccessful = this.hydrateFromSessionStore();
-      if (hydrationSuccessful) {
-        logger.info('Initialized from session store.');
+    const hydrationSuccessful = this.hydrateFromSessionStore();
+    if (hydrationSuccessful) {
+      logger.info('Initialized from session store.');
 
-        return;
-      }
+      return;
     }
 
     await this.initCookieStore();
