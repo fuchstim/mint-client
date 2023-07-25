@@ -43,6 +43,12 @@ export enum EAuthChallengeType {
   EMAIL_OTP = 'EMAIL_OTP',
 }
 
+export enum EOTPAuthChallengeType {
+  TOTP = EAuthChallengeType.TOTP,
+  SMS = EAuthChallengeType.SMS_OTP,
+  EMAIL = EAuthChallengeType.EMAIL_OTP,
+}
+
 export type TAuthChallenge = { primary: boolean, generated: boolean, } & (
   | { type: EAuthChallengeType.PASSWORD, }
   | { type: EAuthChallengeType.CARE, }

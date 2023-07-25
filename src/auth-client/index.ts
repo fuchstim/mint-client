@@ -5,7 +5,7 @@ import Logger from '@ftim/logger';
 const logger = Logger.ns('Auth');
 
 import { EBaseUrl, EIntuitHeaderName, EMagicValues, ETokenGrantType, defaultHeaders } from './_constants';
-import { EAuthChallengeType, TAuthEvents, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './_types';
+import { EAuthChallengeType, EOTPAuthChallengeType, TAuthEvents, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './_types';
 import { TypedEventEmitter } from '@ftim/typed-event-emitter';
 import { SessionStore } from '../common/session-store';
 import { Lock } from '../common/lock';
@@ -107,7 +107,9 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
       }
     }
 
-    const firstEvalResult = await this.evaluateAuth();
+    const flowId = randomUUID().toUpperCase();
+
+    const firstEvalResult = await this.evaluateAuth(flowId);
     if (firstEvalResult.action === 'PASS') {
       const authorizationCode = await this.createAuthorizationCode(firstEvalResult.oauth2CodeResponse.code);
 
@@ -123,9 +125,9 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
       throw new Error(`Primary challenge is not password: ${primaryChallenge.type}`);
     }
 
-    const challengeResult = await this.submitPasswordChallenge(firstEvalResult.authContextId);
+    const challengeResult = await this.submitPasswordChallenge(flowId, firstEvalResult.authContextId);
 
-    const secondEvalResult = await this.evaluateAuth(challengeResult.oauth2CodeResponse.code);
+    const secondEvalResult = await this.evaluateAuth(flowId, challengeResult.oauth2CodeResponse.code);
 
     if (secondEvalResult.action !== 'PASS') {
       throw new Error('Second evaluation failed');
@@ -229,7 +231,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     );
   }
 
-  private async evaluateAuth(authCode?: string) {
+  private async evaluateAuth(flowId: string, authCode?: string) {
     const { access_token, } = authCode ? await this.createAuthorizationCode(authCode) : await this.createClientCredentials();
 
     logger.info(`Evaluating auth for ${this.username}...`);
@@ -271,9 +273,10 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
           Accept: 'application/json',
           'Content-Type': 'application/json',
           [EIntuitHeaderName.DEVICE_ID]: this.deviceId,
+          [EIntuitHeaderName.FLOW_ID]: flowId,
+          [EIntuitHeaderName.TID]: randomUUID(),
           [EIntuitHeaderName.ACCEPT_AUTH_CHALLENGE]: 'sms_otp voice_otp email_otp totp password pwd_reset collect_password collect_recovery_phone collect_confirm_recovery_phone collect_recovery_email collect_recovery_email_or_phone post_auth_challenges consent_7216_ty18 username_reset select_account ar_oow_kba captcha care',
           [EIntuitHeaderName.RISK_PROFILING_DATA]: EMagicValues.RISK_PROFILING_DATA,
-          [EIntuitHeaderName.FLOW_ID]: EMagicValues.OAUTH_FLOW_ID,
         },
       }
     );
@@ -283,8 +286,8 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     return data;
   }
 
-  private async submitPasswordChallenge(authContextId: string) {
-    const result = await this.submitChallenge(authContextId, EAuthChallengeType.PASSWORD, this.password)
+  private async submitPasswordChallenge(flowId: string, authContextId: string) {
+    const result = await this.submitChallenge(flowId, authContextId, EAuthChallengeType.PASSWORD, this.password)
       .catch(error => {
         const responseCode = error.response?.data?.responseCode;
 
@@ -298,7 +301,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     return result;
   }
 
-  private async submitChallenge(authContextId: string, type: EAuthChallengeType, value: string) {
+  private async submitChallenge(flowId: string, authContextId: string, type: EAuthChallengeType, value: string) {
     const { access_token, } = await this.createClientCredentials();
 
     logger.info(`Submitting challenge for ${type}...`);
@@ -325,8 +328,9 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
           'Content-Type': 'application/json',
           [EIntuitHeaderName.DEVICE_ID]: this.deviceId,
           [EIntuitHeaderName.AUTH_CONTEXT_ID]: authContextId,
+          [EIntuitHeaderName.FLOW_ID]: flowId,
+          [EIntuitHeaderName.TID]: randomUUID(),
           [EIntuitHeaderName.ACCEPT_AUTH_CHALLENGE]: 'post_auth_challenges consent_7216_ty18 pwd_reset username_reset',
-          [EIntuitHeaderName.FLOW_ID]: EMagicValues.OAUTH_FLOW_ID,
           [EIntuitHeaderName.RISK_PROFILING_DATA]: EMagicValues.RISK_PROFILING_DATA,
         },
       }
@@ -337,7 +341,38 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     return data;
   }
 
-  async hydrateFromSessionStore() {
+  private async requestOTPToken(flowId: string, authContextId: string, type: EOTPAuthChallengeType) {
+    const { access_token, } = await this.createClientCredentials();
+
+    logger.info(`Requesting ${type} type OTP...`);
+
+    const payload = {
+      challengeToken: [
+        { type, },
+      ],
+    };
+
+    await axios.post(
+      'v2/oauth2codes/send_sign_in_confirmation',
+      payload,
+      {
+        baseURL: EBaseUrl.AUTH_ACCESS_PLATFORM,
+        headers: {
+          ...defaultHeaders.auth,
+          Authorization: `Bearer ${access_token}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          [EIntuitHeaderName.DEVICE_ID]: this.deviceId,
+          [EIntuitHeaderName.AUTH_CONTEXT_ID]: authContextId,
+          [EIntuitHeaderName.FLOW_ID]: flowId,
+          [EIntuitHeaderName.TID]: randomUUID(),
+          [EIntuitHeaderName.RISK_PROFILING_DATA]: EMagicValues.RISK_PROFILING_DATA,
+        },
+      }
+    );
+  }
+
+  private async hydrateFromSessionStore() {
     logger.info('Hydrating from session store...');
 
     const authStore = this.sessionStore.get('auth');

@@ -43,7 +43,7 @@ export class MobileMintClient {
     this.client.interceptors.response.use(this.cookieStore.responseInterceptor);
 
     this.client.interceptors.request.use(async request => {
-      if (!this.userId) { return request; }
+      if (!this.deviceId) { return request; }
 
       const accessToken = await this.authClient.getAccessToken();
 
