@@ -6,6 +6,7 @@ export type TAuthTokenFormat = {
 
 export enum ERiskLevel {
   BYPASS = 'BYPASS',
+  MED = 'MED',
   LOW = 'LOW'
 }
 
@@ -29,12 +30,6 @@ export enum EAuthChallengeType {
   EMAIL_OTP = 'EMAIL_OTP',
 }
 
-export enum EOTPAuthChallengeType {
-  TOTP = EAuthChallengeType.TOTP,
-  SMS = EAuthChallengeType.SMS_OTP,
-  EMAIL = EAuthChallengeType.EMAIL_OTP,
-}
-
 export type TAuthChallenge = { primary: boolean, generated: boolean, } & (
   | { type: EAuthChallengeType.PASSWORD, }
   | { type: EAuthChallengeType.CARE, }
@@ -48,7 +43,7 @@ export type TAttribute = { key: string, value: string };
 
 export type TEvaluateAuthResponse =
   | ({ action: 'PASS', attributes: TAttribute[] } & TVerifySignInResponse)
-  | { action: 'CHALLENGE', authContextId: string, attributes: TAttribute[], challenge: TAuthChallenge[] };
+  | { action: 'CHALLENGE', authContextId?: string, attributes: TAttribute[], challenge: TAuthChallenge[] };
 
 export type TSession = {
   deviceId: string,

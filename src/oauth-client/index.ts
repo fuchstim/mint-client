@@ -14,6 +14,7 @@ class OAuthClient {
         Accept: '*/*',
         'Accept-Language': 'en-ca',
         'User-Agent': 'com.intuit.identity.IntuitAuthorization/7.27.2(1) com.mint.internal/150.70.0(1.24203) iOS/16.5.1',
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
         [EIntuitHeaderName.DEVICE_INFO]: '{"mobile":true,"os":"iOS 16.5.1","model":"iPhone15,2","platform":"iOS","userAgent":"com.intuit.identity.IntuitAuthorization\/7.27.2(1) com.mint.internal\/150.70.0(1.24203) iOS\/16.5.1","name":"iPhone","make":"Apple"}',
         [EIntuitHeaderName.COUNTRY]: 'CA',
         [EIntuitHeaderName.LOCALE]: 'en-ca',
@@ -89,7 +90,7 @@ class OAuthClient {
     clientSecret: string,
     payload: P & { grant_type: ETokenGrantType }
   ) {
-    const { data, } = await axios.post<R>(
+    const { data, } = await this.client.post<R>(
       '/oauth2/v1/tokens/bearer',
       new URLSearchParams(payload).toString(),
       {

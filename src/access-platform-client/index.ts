@@ -4,8 +4,8 @@ import jsonwebtoken, { JwtPayload } from 'jsonwebtoken';
 import Logger from '@ftim/logger';
 const logger = Logger.ns('Auth');
 
-import { BASE_URL, EIntuitHeaderName, EMagicValues } from './_constants';
-import { EAuthChallengeType, EOTPAuthChallengeType, TSession, TEvaluateAuthResponse, TVerifySignInResponse } from './_types';
+import { BASE_URL, EIntuitHeaderName, EMagicValues, MAX_AUTH_ATTEMPTS } from './_constants';
+import { EAuthChallengeType, TSession, TEvaluateAuthResponse, TVerifySignInResponse, TAuthChallenge } from './_types';
 import { SessionStore } from '../common/session-store';
 import { Lock } from '../common/lock';
 import oauthClient from '../oauth-client';
@@ -15,22 +15,25 @@ export type TAuthClientOptions = {
   sessionStore: SessionStore
   username: string,
   password: string,
+  otpProvider: (type: EAuthChallengeType) => Promise<string>,
 };
 
 const ACCESS_PLATFORM_CLIENT_LOCK = new Lock('access-platform-client');
 
 export class AccessPlatformClient {
-  private sessionStore: SessionStore;
-  private username: string;
-  private password: string;
+  private sessionStore: TAuthClientOptions['sessionStore'];
+  private username: TAuthClientOptions['username'];
+  private password: TAuthClientOptions['password'];
+  private otpProvider: TAuthClientOptions['otpProvider'];
 
   private client: AxiosInstance;
   private session?: TSession;
 
-  constructor({ sessionStore, username, password, }: TAuthClientOptions) {
+  constructor({ sessionStore, username, password, otpProvider, }: TAuthClientOptions) {
     this.sessionStore = sessionStore;
     this.username = username;
     this.password = password;
+    this.otpProvider = otpProvider;
 
     this.client = axios.create({
       baseURL: BASE_URL,
@@ -116,66 +119,88 @@ export class AccessPlatformClient {
 
     const { clientId, clientSecret, } = await oauthClient.registerDevice(deviceId);
 
-    const firstEvalResult = await this.evaluateAuth(flowId, deviceId, clientId, clientSecret);
-    if (firstEvalResult.action === 'PASS') {
-      const authorizationCode = await oauthClient.createAuthorizationCode(
+    let authContextId: string | undefined;
+    let authCode: string | undefined;
+    for (let i = 0; i < MAX_AUTH_ATTEMPTS; i++) {
+      const evalResult = await this.evaluateAuth(flowId, deviceId, clientId, clientSecret, authCode);
+      if (evalResult.action === 'PASS') {
+        const authorizationCode = await oauthClient.createAuthorizationCode(
+          deviceId,
+          clientId,
+          clientSecret,
+          evalResult.oauth2CodeResponse.code
+        );
+
+        return this.createSessionFromAuthorizationCode(
+          deviceId,
+          clientId,
+          clientSecret,
+          authorizationCode
+        );
+      }
+
+      authContextId = authContextId ?? evalResult.authContextId;
+      if (!authContextId) {
+        throw new Error('Missing auth context id');
+      }
+
+      authCode = await this.attemptChallenge(
+        flowId,
         deviceId,
         clientId,
         clientSecret,
-        firstEvalResult.oauth2CodeResponse.code
-      );
-
-      return this.createSessionFromAuthorizationCode(
-        deviceId,
-        clientId,
-        clientSecret,
-        authorizationCode
+        authContextId,
+        evalResult.challenge
       );
     }
 
-    const primaryChallenge = firstEvalResult.challenge.find(({ primary, }) => primary);
-    if (!primaryChallenge) {
-      throw new Error('No primary challenge found');
+    throw new Error('Failed to create session');
+  }
+
+  private async attemptChallenge(
+    flowId: string,
+    deviceId: string,
+    clientId: string,
+    clientSecret: string,
+    authContextId: string,
+    availableChallenges: TAuthChallenge[]
+  ) {
+    const supportedChallengeTypes = [
+      EAuthChallengeType.PASSWORD,
+      EAuthChallengeType.TOTP,
+      EAuthChallengeType.SMS_OTP,
+      EAuthChallengeType.EMAIL_OTP,
+    ];
+
+    const supportedChallenges = availableChallenges.filter(({ type, }) => supportedChallengeTypes.includes(type));
+
+    const challenge = supportedChallenges.find(({ primary, }) => primary) ?? supportedChallenges[0];
+
+    switch (challenge.type) {
+      case EAuthChallengeType.PASSWORD:
+        return this.submitPasswordChallenge(
+          flowId,
+          deviceId,
+          clientId,
+          clientSecret,
+          authContextId
+        );
+      case EAuthChallengeType.TOTP:
+      case EAuthChallengeType.SMS_OTP:
+      case EAuthChallengeType.EMAIL_OTP:
+        return this.submitOTPChallenge(
+          flowId,
+          deviceId,
+          clientId,
+          clientSecret,
+          authContextId,
+          challenge.type
+        );
     }
 
-    if (primaryChallenge.type !== EAuthChallengeType.PASSWORD) {
-      debugger;
-      throw new Error(`Primary challenge is not password: ${primaryChallenge.type}`);
-    }
+    debugger;
 
-    const challengeResult = await this.submitPasswordChallenge(
-      flowId,
-      deviceId,
-      clientId,
-      clientSecret,
-      firstEvalResult.authContextId
-    );
-
-    const secondEvalResult = await this.evaluateAuth(
-      flowId,
-      deviceId,
-      clientId,
-      clientSecret,
-      challengeResult.oauth2CodeResponse.code
-    );
-
-    if (secondEvalResult.action !== 'PASS') {
-      throw new Error('Second evaluation failed');
-    }
-
-    const authorizationCode = await oauthClient.createAuthorizationCode(
-      deviceId,
-      clientId,
-      clientSecret,
-      secondEvalResult.oauth2CodeResponse.code
-    );
-
-    return this.createSessionFromAuthorizationCode(
-      deviceId,
-      clientId,
-      clientSecret,
-      authorizationCode
-    );
+    return 'bingus';
   }
 
   private createSessionFromAuthorizationCode(
@@ -304,7 +329,43 @@ export class AccessPlatformClient {
         throw new Error(`Failed to submit password challenge: ${responseCode}`);
       });
 
-    return result;
+    return result.oauth2CodeResponse.code;
+  }
+
+  private async submitOTPChallenge(
+    flowId: string,
+    deviceId: string,
+    clientId: string,
+    clientSecret: string,
+    authContextId: string,
+    type: EAuthChallengeType
+  ) {
+    if (type !== EAuthChallengeType.TOTP) {
+      await this.requestOTPToken(
+        flowId,
+        deviceId,
+        clientId,
+        clientSecret,
+        authContextId,
+        type
+      );
+    }
+
+    const token = await this.otpProvider(type);
+
+    const result = await this.submitChallenge(
+      flowId,
+      deviceId,
+      clientId,
+      clientSecret,
+      authContextId,
+      type,
+      token
+    );
+
+    debugger;
+
+    return result.oauth2CodeResponse.code;
   }
 
   private async submitChallenge(
@@ -352,7 +413,7 @@ export class AccessPlatformClient {
     clientId: string,
     clientSecret: string,
     authContextId: string,
-    type: EOTPAuthChallengeType
+    type: EAuthChallengeType
     ) {
     const { access_token, } = await oauthClient.createClientCredentials(deviceId, clientId, clientSecret);
 

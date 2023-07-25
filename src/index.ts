@@ -1,4 +1,5 @@
 import fs from 'fs';
+import prompts from 'prompts';
 
 import { SessionStore } from './common/session-store';
 import { AccessPlatformClient } from './access-platform-client';
@@ -15,6 +16,17 @@ const accessPlatformClient = new AccessPlatformClient({
   sessionStore,
   username,
   password,
+  otpProvider: async type => {
+    const { token, } = await prompts([
+      {
+        type: 'text',
+        name: 'token',
+        message: `Enter ${type} token`,
+      },
+    ]);
+
+    return token;
+  },
 });
 
 const mobileMintClient = new MobileMintClient({
