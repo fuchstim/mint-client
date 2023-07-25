@@ -5,8 +5,7 @@ import Logger from '@ftim/logger';
 const logger = Logger.ns('Auth');
 
 import { EBaseUrl, EIntuitHeaderName, EMagicValues, ETokenGrantType, defaultHeaders } from './_constants';
-import { EAuthChallengeType, EOTPAuthChallengeType, TAuthEvents, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TVerifySignInResponse } from './_types';
-import { TypedEventEmitter } from '@ftim/typed-event-emitter';
+import { EAuthChallengeType, EOTPAuthChallengeType, TEvaluateAuthResponse, TOAuthAuthorizationCodeResponse, TOAuthClientCredentialsResponse, TOAuthRegisterDeviceResponse, TVerifySignInResponse } from './_types';
 import { SessionStore } from '../common/session-store';
 import { Lock } from '../common/lock';
 
@@ -18,8 +17,10 @@ export type TAuthClientOptions = {
 
 const AUTH_CLIENT_LOCK = new Lock('auth-client');
 
-export class AuthClient extends TypedEventEmitter<TAuthEvents> {
+export class AuthClient {
   private deviceId: string = randomUUID();
+  private clientId?: string;
+  private clientSecret?: string;
 
   private sessionStore: SessionStore;
   private username: string;
@@ -28,8 +29,6 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
   private authorizationCode?: TOAuthAuthorizationCodeResponse;
 
   constructor({ sessionStore, username, password, }: TAuthClientOptions) {
-    super();
-
     this.sessionStore = sessionStore;
     this.username = username;
     this.password = password;
@@ -65,6 +64,8 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
 
       this.sessionStore.set('auth', {
         deviceId: this.deviceId,
+        clientId: this.clientId!,
+        clientSecret: this.clientSecret!,
         refreshToken: this.authorizationCode.refresh_token,
         refreshTokenExpiresAt: this.refreshTokenExpiresAt.getTime(),
       });
@@ -89,6 +90,8 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
 
       this.sessionStore.set('auth', {
         deviceId: this.deviceId,
+        clientId: this.clientId!,
+        clientSecret: this.clientSecret!,
         refreshToken: this.authorizationCode.refresh_token,
         refreshTokenExpiresAt: this.refreshTokenExpiresAt.getTime(),
       });
@@ -109,6 +112,10 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
 
     const flowId = randomUUID().toUpperCase();
 
+    const { clientId, clientSecret, } = await this.registerDevice();
+    this.clientId = clientId;
+    this.clientSecret = clientSecret;
+
     const firstEvalResult = await this.evaluateAuth(flowId);
     if (firstEvalResult.action === 'PASS') {
       const authorizationCode = await this.createAuthorizationCode(firstEvalResult.oauth2CodeResponse.code);
@@ -122,6 +129,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     }
 
     if (primaryChallenge.type !== EAuthChallengeType.PASSWORD) {
+      debugger;
       throw new Error(`Primary challenge is not password: ${primaryChallenge.type}`);
     }
 
@@ -152,6 +160,37 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     this.sessionStore.set('auth', undefined);
 
     this.emit('deauthenticated', null);
+  }
+
+  private async registerDevice() {
+    const payload = {
+      x_app_token: EMagicValues.OAUTH_APP_TOKEN,
+      x_client_context: 'Device Name: "iPhone" | Model: "iPhone15,2"',
+    };
+
+    const { data, } = await axios.post<TOAuthRegisterDeviceResponse>(
+      '/oauth2/v1/clients',
+      new URLSearchParams(payload).toString(),
+      {
+        baseURL: EBaseUrl.AUTH_OAUTH,
+        auth: {
+          username: this.clientId!,
+          password: this.clientSecret!,
+        },
+        headers: {
+          ...defaultHeaders.auth,
+          Accept: '*/*',
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          [EIntuitHeaderName.DEVICE_ID]: this.deviceId,
+          [EIntuitHeaderName.TID]: randomUUID(),
+        },
+      }
+    );
+
+    return {
+      clientId: data.client_id,
+      clientSecret: data.client_secret,
+    };
   }
 
   private async createClientCredentials() {
@@ -187,15 +226,15 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     };
   }
 
-  private async createBearerToken<R, P = Record<string, string>>(params: P & { grant_type: ETokenGrantType }) {
+  private async createBearerToken<R, P = Record<string, string>>(payload: P & { grant_type: ETokenGrantType }) {
     const { data, } = await axios.post<R>(
       '/oauth2/v1/tokens/bearer',
-      new URLSearchParams(params).toString(),
+      new URLSearchParams(payload).toString(),
       {
         baseURL: EBaseUrl.AUTH_OAUTH,
         auth: {
-          username: EMagicValues.OAUTH_CLIENT_ID,
-          password: EMagicValues.OAUTH_CLIENT_SECRET,
+          username: this.clientId!,
+          password: this.clientSecret!,
         },
         headers: {
           ...defaultHeaders.auth,
@@ -217,8 +256,8 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
       {
         baseURL: EBaseUrl.AUTH_OAUTH,
         auth: {
-          username: EMagicValues.OAUTH_CLIENT_ID,
-          password: EMagicValues.OAUTH_CLIENT_SECRET,
+          username: this.clientId!,
+          password: this.clientSecret!,
         },
         headers: {
           ...defaultHeaders.auth,
@@ -238,7 +277,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
 
     const payload = {
       oauth2CodeRequest: {
-        clientId: EMagicValues.OAUTH_CLIENT_ID,
+        clientId: this.clientId!,
         redirectUri: EMagicValues.OAUTH_REDIRECT_URI,
       },
       policies: [
@@ -251,7 +290,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
             },
             {
               key: 'namespaceId',
-              value: '50000026',
+              value: EMagicValues.NAMESPACE_ID,
             },
             {
               key: 'identifierTypes',
@@ -311,7 +350,7 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
         { type, value, },
       ],
       oauth2CodeRequest: {
-        clientId: EMagicValues.OAUTH_CLIENT_ID,
+        clientId: this.clientId!,
         redirectUri: EMagicValues.OAUTH_REDIRECT_URI,
       },
     };
@@ -378,9 +417,9 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     const authStore = this.sessionStore.get('auth');
     if (!authStore) { return; }
 
-    const { deviceId, refreshToken, refreshTokenExpiresAt, } = authStore;
+    const { deviceId, clientId, clientSecret, refreshToken, refreshTokenExpiresAt, } = authStore;
 
-    if (!deviceId || !refreshToken || !refreshTokenExpiresAt) {
+    if (!deviceId || !clientId || !clientSecret || !refreshToken || !refreshTokenExpiresAt) {
       logger.info('One or more values are missing from auth store');
 
       return;
@@ -393,6 +432,8 @@ export class AuthClient extends TypedEventEmitter<TAuthEvents> {
     }
 
     this.deviceId = deviceId;
+    this.clientId = clientId;
+    this.clientSecret = clientSecret;
 
     logger.info('Validating stored credentials...');
 

@@ -7,7 +7,7 @@ import { MobileMintClient } from './mobile-mint-client';
 const { username, password, } = JSON.parse(fs.readFileSync('./.test-credentials.json', 'utf-8'));
 
 const sessionStore = new SessionStore({
-  identifier: username,
+  identifier: username + '1',
   secret: password,
 });
 

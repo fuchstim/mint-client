@@ -1,3 +1,8 @@
+export type TOAuthRegisterDeviceResponse = {
+  client_id: string,
+  client_secret: string,
+};
+
 export type TOAuthClientCredentialsResponse = {
   token_type: 'bearer',
 
@@ -63,9 +68,3 @@ export type TAttribute = { key: string, value: string };
 export type TEvaluateAuthResponse =
   | ({ action: 'PASS', attributes: TAttribute[] } & TVerifySignInResponse)
   | { action: 'CHALLENGE', authContextId: string, attributes: TAttribute[], challenge: TAuthChallenge[] };
-
-export type TAuthEvents = {
-  authenticated: TOAuthAuthorizationCodeResponse,
-  deauthenticated: null,
-  authorizationCodeRefreshed: TOAuthAuthorizationCodeResponse,
-};

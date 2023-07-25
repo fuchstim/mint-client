@@ -8,6 +8,8 @@ const logger = Logger.ns('SessionStore');
 export type TSessionStore = {
   auth?: {
     deviceId: string,
+    clientId: string,
+    clientSecret: string,
     refreshToken: string,
     refreshTokenExpiresAt: number,
   },
