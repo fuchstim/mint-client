@@ -133,3 +133,5 @@ dist
 .session-store*
 .test-credentials.json
 transactions.json
+
+.DS_Store
