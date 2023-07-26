@@ -43,7 +43,7 @@ export default class SessionStore {
   private get storeFileName() {
     const storeIdentifier = createHash('sha256').update(this.identifier).digest('hex');
 
-    return path.resolve(`.session-store-${storeIdentifier}.json`);
+    return path.resolve(`.session-${storeIdentifier}.json`);
   }
 
   private get encryptionKey() {
