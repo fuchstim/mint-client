@@ -1,20 +1,20 @@
 import axios, { AxiosInstance } from 'axios';
-
 import Logger from '@ftim/logger';
 const logger = Logger.ns('MobileMint');
 
-import { CookieStore } from '../common/cookie-store';
-import { SessionStore } from '../common/session-store';
-import { Lock } from '../common/lock';
+import CookieStore from '../common/cookie-store';
+import Lock from '../common/lock';
 import dayjs from '../common/dayjs';
 
-import type { AccessPlatformClient } from '../access-platform-client';
+import type SessionStore from '../common/session-store';
+import type AuthClient from '../auth';
+
 import { BASE_URL, defaultHeaders, defaultMQPPRequestParams, defaultMQPPRequestPayload } from './_constants';
 import { TGetNewUuidResponse, TMMQPBundledRequestTypes, TMMQPRequestTypes, TProcessRequestTypes } from './_types';
 
 export type TMobileMintClientOptions = {
   sessionStore: SessionStore,
-  accessPlatformClient: AccessPlatformClient,
+  authClient: AuthClient,
 };
 
 const MOBILE_MINT_CLIENT_LOCK = new Lock('mobile-mint-client');
@@ -31,18 +31,18 @@ const PRE_INIT_ENDPOINTS = [
   'mobileSubmitDeviceToken.xevent',
 ];
 
-export class MobileMintClient {
+export default class MobileMintClient {
   private sessionStore: SessionStore;
-  private accessPlatformClient: AccessPlatformClient;
+  private authClient: AuthClient;
   private client: AxiosInstance;
   private cookieStore: CookieStore = new CookieStore();
 
   private userId?: string;
   private deviceId?: string;
 
-  constructor({ sessionStore, accessPlatformClient, }: TMobileMintClientOptions) {
+  constructor({ sessionStore, authClient, }: TMobileMintClientOptions) {
     this.sessionStore = sessionStore;
-    this.accessPlatformClient = accessPlatformClient;
+    this.authClient = authClient;
 
     this.client = axios.create({
       baseURL: BASE_URL,
@@ -63,7 +63,7 @@ export class MobileMintClient {
         await this.initSafe();
       }
 
-      const accessToken = await this.accessPlatformClient.getAccessToken();
+      const accessToken = await this.authClient.getAccessToken();
 
       request.headers.set('Authorization', `Bearer ${accessToken}`);
       request.headers.set('mint-userid', this.userId);
@@ -162,7 +162,7 @@ export class MobileMintClient {
     await this.client.post(
       'getUserPod.xevent',
       new URLSearchParams({
-        username: this.accessPlatformClient.getUsername(),
+        username: this.authClient.getUsername(),
         clientType: 'Mint',
       }).toString()
     );

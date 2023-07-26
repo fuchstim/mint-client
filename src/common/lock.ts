@@ -15,7 +15,7 @@ const isLockActive = (name: string) => {
   return true;
 };
 
-export class Lock {
+export default class Lock {
   private name: string;
 
   constructor(name: string) {

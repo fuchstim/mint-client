@@ -114,4 +114,5 @@ class OAuthClient {
   }
 }
 
+export { TOAuthAuthorizationCodeResponse };
 export default new OAuthClient();

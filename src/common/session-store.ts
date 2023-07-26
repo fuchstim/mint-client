@@ -1,10 +1,10 @@
 import path from 'path';
 import fs from 'fs';
-
-import Logger from '@ftim/logger';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
-import { TSession } from '../access-platform-client/_types';
+import Logger from '@ftim/logger';
 const logger = Logger.ns('SessionStore');
+
+import { TSession } from '../auth';
 
 export type TSessionStore = {
   auth?: TSession,
@@ -20,7 +20,7 @@ export type TSessionStoreOptions = {
   secret: string,
 };
 
-export class SessionStore {
+export default class SessionStore {
   private identifier: string;
   private secret: string;
 

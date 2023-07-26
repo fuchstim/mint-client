@@ -4,14 +4,17 @@ import jsonwebtoken, { JwtPayload } from 'jsonwebtoken';
 import Logger from '@ftim/logger';
 const logger = Logger.ns('Auth');
 
+import type SessionStore from '../../common/session-store';
+import Lock from '../../common/lock';
+
+import oauthClient, { TOAuthAuthorizationCodeResponse } from '../oauth-client';
+
 import { BASE_URL, EIntuitHeaderName, EMagicValues, MAX_AUTH_ATTEMPTS } from './_constants';
 import { EAuthChallengeType, TSession, TEvaluateAuthResponse, TVerifySignInResponse, TAuthChallenge } from './_types';
-import { SessionStore } from '../common/session-store';
-import { Lock } from '../common/lock';
-import oauthClient from '../oauth-client';
-import { TOAuthAuthorizationCodeResponse } from '../oauth-client/_types';
 
-export type TAuthClientOptions = {
+export { TSession };
+
+export type TAccessPlatformClient = {
   sessionStore: SessionStore
   username: string,
   password: string,
@@ -20,16 +23,16 @@ export type TAuthClientOptions = {
 
 const ACCESS_PLATFORM_CLIENT_LOCK = new Lock('access-platform-client');
 
-export class AccessPlatformClient {
-  private sessionStore: TAuthClientOptions['sessionStore'];
-  private username: TAuthClientOptions['username'];
-  private password: TAuthClientOptions['password'];
-  private userInputProvider: TAuthClientOptions['userInputProvider'];
+export default class AccessPlatformClient {
+  private sessionStore: TAccessPlatformClient['sessionStore'];
+  private username: TAccessPlatformClient['username'];
+  private password: TAccessPlatformClient['password'];
+  private userInputProvider: TAccessPlatformClient['userInputProvider'];
 
   private client: AxiosInstance;
   private session?: TSession;
 
-  constructor({ sessionStore, username, password, userInputProvider, }: TAuthClientOptions) {
+  constructor({ sessionStore, username, password, userInputProvider, }: TAccessPlatformClient) {
     this.sessionStore = sessionStore;
     this.username = username;
     this.password = password;

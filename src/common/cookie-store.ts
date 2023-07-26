@@ -1,6 +1,6 @@
-import { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
-export class CookieStore {
+export default class CookieStore {
   private cookies: Record<string, string>;
 
   constructor(initialCookies?: Record<string, string>) {
