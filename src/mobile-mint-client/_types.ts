@@ -130,6 +130,49 @@ export type TUserDataResponse = {
   lastModified: number
 };
 
+export type TTransactionsResponse = {
+  visibleDateFrom: number,
+  visibleDateTo: number,
+  hasEarlierTransactions: boolean,
+  totalCountInFullResult: number,
+  modifiedFrom: number | null,
+  earliestVisibleDateInFullResult: number,
+  modifiedTo: number,
+  transactions: {
+    originalDatePostedString: string,
+    datePostedString: string,
+    isPercent: boolean,
+    manualTransactionType: string,
+    userNote: string,
+    pending: string,
+    description: string,
+    percent: unknown | null,
+    cReport: string,
+    hasAttachment: boolean,
+    origDesc: string,
+    currency: string,
+    id: number,
+    amount: number,
+    checkNumber: unknown | null,
+    isParent: string,
+    duplicate: string,
+    version: string,
+    tags: unknown[],
+    accountId: 2460886,
+    isCheck: string,
+    mintDescription: string,
+    isBankCc: string,
+    commonMerchantId: unknown | null,
+    inferredCategoryId: number,
+    modifiedDate: number,
+    mReport: string,
+    isSoftDeleted: boolean,
+    isLinkedToRule: boolean,
+    categoryId: number,
+    transactionReviewState: string
+  }[]
+};
+
 export type TMMQPRequestType<E extends string, P, R> = {
   endpoint: E,
   payload: P,
@@ -183,16 +226,7 @@ export type TMMQPBundledRequestTypes = {
     'getModifiedTransactions',
     'MintUserMobileService',
     { visibleDateFrom?: number, visibleDateTo?: number, accountIDs: number[], maxCount: number },
-    {
-      visibleDateFrom: number,
-      visibleDateTo: number,
-      hasEarlierTransactions: boolean,
-      totalCountInFullResult: number,
-      modifiedFrom: number | null,
-      transactions: unknown[],
-      earliestVisibleDateInFullResult: number,
-      modifiedTo: number,
-     }
+    TTransactionsResponse
   >
 };
 

@@ -10,7 +10,7 @@ import type SessionStore from '../common/session-store';
 import type AuthClient from '../auth';
 
 import { BASE_URL, defaultHeaders, defaultMQPPRequestParams, defaultMQPPRequestPayload } from './_constants';
-import { TGetNewUuidResponse, TMMQPBundledRequestTypes, TMMQPRequestTypes, TProcessRequestTypes } from './_types';
+import { TGetNewUuidResponse, TMMQPBundledRequestTypes, TMMQPRequestTypes, TProcessRequestTypes, TTransactionsResponse } from './_types';
 
 export type TMobileMintClientOptions = {
   sessionStore: SessionStore,
@@ -93,18 +93,21 @@ export default class MobileMintClient {
     return userProfile;
   }
 
-  async getCategories() {
+  async getCategories(includeDeletedCategories: boolean = true) {
     const categories = await this.processRequest(
       'getCategories',
       'categoriesResponse',
-      { includeDeletedCategories: true, modifiedFrom: '0', }
+      { includeDeletedCategories, modifiedFrom: '0', }
     );
 
     return categories;
   }
 
   async getTransactions(accountIds: number[], fromDate: Date, toDate: Date, limit: number) {
-    const transactions = await this.processBundledMMQPRequest(
+    const MAX_PAGE_SIZE = 500;
+
+    // Returns most recent transactions, ordered by date ascending, up to limit
+    const getPage = (fromDate: Date, toDate: Date, limit: number) => this.processBundledMMQPRequest(
       'fetchModifiedTransactions',
       'getModifiedTransactions',
       'MintUserMobileService',
@@ -116,7 +119,37 @@ export default class MobileMintClient {
       }
     );
 
-    return transactions;
+    const transactions: TTransactionsResponse['transactions'] = [];
+
+    while (transactions.length < limit) {
+      const pageToDate = new Date(
+        Math.min(
+          toDate.getTime(),
+          ...transactions.map(
+            t => dayjs(t.datePostedString, 'YYYYMMDD').valueOf()
+          )
+        )
+      );
+      const page = await getPage(fromDate, pageToDate, Math.min(limit, MAX_PAGE_SIZE));
+
+      const newTransactions = page.transactions.filter(
+        t => !transactions.some(
+          existingTransaction => existingTransaction.id === t.id
+        )
+      );
+
+      transactions.push(...newTransactions);
+
+      logger.info(`Retrieved ${transactions.length} transactions.`);
+
+      if (newTransactions.length === 0) {
+        break;
+      }
+    }
+
+    return transactions
+      .sort((a, b) => dayjs(b.datePostedString, 'YYYYMMDD').valueOf() - dayjs(a.datePostedString, 'YYYYMMDD').valueOf())
+      .slice(0, limit);
   }
 
   private async initSafe() {

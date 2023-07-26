@@ -32,26 +32,29 @@ const mobileMintClient = new MobileMintClient({
 const dataApiClient = new DataApiClient(authClient);
 
 const run = async () => {
-  const budgetSummary = await dataApiClient.query(
-    'getBudgetSummary',
-    { date: new Date(), }
-  );
+  // const budgetSummary = await dataApiClient.query(
+  //   'getBudgetSummary',
+  //   { date: new Date(), }
+  // );
 
-  debugger;
+  // debugger;
 
   // const [ userProfile, categories, ] = await Promise.all([
-  //   mobileMintClient.getUserProfile(),
+  //   ,
   //   mobileMintClient.getCategories(),
   // ]);
 
-  // const accountIds = userProfile.accounts.map(a => a.accountId);
+  const userProfile = await mobileMintClient.getUserProfile();
+  const accountIds = userProfile.accounts.map(a => a.accountId);
 
-  // const transactions = await mobileMintClient.getTransactions(
-  //   accountIds,
-  //   new Date(0),
-  //   new Date(),
-  //   2000
-  // );
+  const transactions = await mobileMintClient.getTransactions(
+    accountIds,
+    new Date(0),
+    new Date(),
+    100
+  );
+
+  debugger;
 
   // fs.writeFileSync(
   //   'transactions.json',
