@@ -108,25 +108,23 @@ export type TUserDataResponse = {
     status: number,
   }[],
   baseURI: string,
-  accounts: [
-    {
-      linkedAccountId: number | null,
-      accountName: string,
-      ccAggrStatus:number,
-      accountType:number,
-      subAccountType: string,
-      numTransactions:number,
-      isHiddenFromPlanningTrends: false,
-      accountNumber: string,
-      accountStatus:number,
-      accountId:number,
-      balance:number,
-      modified:number,
-      currency: string,
-      fiLoginId:number,
-      isHiddenLinkedAccount: boolean
-    },
-  ],
+  accounts: {
+    linkedAccountId: number | null,
+    accountName: string,
+    ccAggrStatus:number,
+    accountType:number,
+    subAccountType: string,
+    numTransactions:number,
+    isHiddenFromPlanningTrends: false,
+    accountNumber: string,
+    accountStatus:number,
+    accountId:number,
+    balance:number,
+    modified:number,
+    currency: string,
+    fiLoginId:number,
+    isHiddenLinkedAccount: boolean
+  }[],
   lastModified: number
 };
 
