@@ -54,3 +54,10 @@ export type TSession = {
   refreshToken: string,
   refreshTokenExpiresAt: number,
 };
+
+export enum EUserInputType {
+  CAPTCHA_TOKEN = 'CAPTCHA_TOKEN',
+  TOTP = 'TOTP',
+  SMS_OTP = 'SMS_OTP',
+  EMAIL_OTP = 'EMAIL_OTP',
+}

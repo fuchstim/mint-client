@@ -5,11 +5,13 @@ import SessionStore from './common/session-store';
 import AuthClient from './auth';
 import MobileMintClient from './mobile-mint-client';
 import DataApiClient from './data-api-client';
+import { EUserInputType } from './auth/access-platform-client';
+import requestCaptchaToken from './auth/captcha-server';
 
 const { username, password, } = JSON.parse(fs.readFileSync('./.test-credentials.json', 'utf-8'));
 
 const sessionStore = new SessionStore({
-  identifier: username + '1',
+  identifier: username + '3',
   secret: password,
 });
 
@@ -18,6 +20,12 @@ const authClient = new AuthClient({
   username,
   password,
   userInputProvider: async type => {
+    if (type === EUserInputType.CAPTCHA_TOKEN) {
+      const captchaToken = await requestCaptchaToken();
+
+      return captchaToken;
+    }
+
     const { input, } = await prompts({ type: 'text', name: 'input', message: `Enter ${type}`, });
 
     return input;

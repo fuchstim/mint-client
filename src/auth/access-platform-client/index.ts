@@ -10,15 +10,15 @@ import Lock from '../../common/lock';
 import oauthClient, { TOAuthAuthorizationCodeResponse } from '../oauth-client';
 
 import { BASE_URL, EIntuitHeaderName, EMagicValues, MAX_AUTH_ATTEMPTS } from './_constants';
-import { EAuthChallengeType, TSession, TEvaluateAuthResponse, TVerifySignInResponse, TAuthChallenge } from './_types';
+import { EAuthChallengeType, TSession, TEvaluateAuthResponse, TVerifySignInResponse, TAuthChallenge, EUserInputType } from './_types';
 
-export { TSession };
+export { TSession, EUserInputType };
 
 export type TAccessPlatformClient = {
   sessionStore: SessionStore
   username: string,
   password: string,
-  userInputProvider: (type: string) => Promise<string>,
+  userInputProvider: (type: EUserInputType) => Promise<string>,
 };
 
 const ACCESS_PLATFORM_CLIENT_LOCK = new Lock('access-platform-client');
@@ -152,10 +152,7 @@ export default class AccessPlatformClient {
       captchaToken = undefined;
 
       if (evalResult.challenge[0].type === EAuthChallengeType.CAPTCHA) {
-        logger.error('Solve captcha and enter captcha_token:');
-        logger.error('https://accounts.intuit.com/recaptcha-native.html?offering_id=Intuit.ifs.mint.3&redirect_url=https://oauth2.intuit.com/nativeredirect/v1&locale=en-ca');
-
-        captchaToken = await this.userInputProvider('captcha_token');
+        captchaToken = await this.userInputProvider(EUserInputType.CAPTCHA_TOKEN);
 
         continue;
       }
@@ -369,7 +366,7 @@ export default class AccessPlatformClient {
     clientId: string,
     accessToken: string,
     authContextId: string,
-    type: EAuthChallengeType
+    type: EAuthChallengeType.TOTP | EAuthChallengeType.SMS_OTP | EAuthChallengeType.EMAIL_OTP
   ) {
     if (type !== EAuthChallengeType.TOTP) {
       await this.requestOTPToken(
@@ -381,7 +378,12 @@ export default class AccessPlatformClient {
       );
     }
 
-    const token = await this.userInputProvider(type);
+    const userInputType = {
+      [EAuthChallengeType.TOTP]: EUserInputType.TOTP,
+      [EAuthChallengeType.SMS_OTP]: EUserInputType.SMS_OTP,
+      [EAuthChallengeType.EMAIL_OTP]: EUserInputType.EMAIL_OTP,
+    }[type];
+    const token = await this.userInputProvider(userInputType);
 
     const result = await this.submitChallenge(
       flowId,
