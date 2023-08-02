@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="https://github.com/fuchstim/mint-client">
-    <img src="images/logotype.png" alt="Logo" width="400" height="80">
+    <img src="https://raw.githubusercontent.com/fuchstim/mint-client/main/images/logotype.png" alt="Logo" width="400" height="80">
   </a>
 
   <p align="center">
