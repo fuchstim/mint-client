@@ -1,15 +1,46 @@
-import path from 'path';
-import fs from 'fs';
 import { URL } from 'url';
 
 import express from 'express';
 import Logger from '@ftim/logger';
-const logger = Logger.ns('CaptchaServer');
+const logger = Logger.ns('MFAHelpers', 'Captcha');
 
-const indexPath = path.join(__dirname, 'index.html');
-const indexFile = fs.readFileSync(indexPath, 'utf-8').toString();
+const indexHtml = /* html */`
+<html>
 
-export type TCaptchaServerOptions = {
+<head>
+  <style type="text/css">
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  </style>
+
+  <script type="text/javascript">
+    function parseAccessToken() {
+      const iframe = document.getElementById('captchaFrame');
+
+      console.log(iframe)
+    }
+  </script>
+</head>
+
+<body>
+  <iframe id="captchaFrame" onload="parseAccessToken()" src="{{captchaUrl}}" />
+</body>
+
+</html>
+`;
+
+export type TCaptchaHelperOptions = {
   timeoutMs?: number;
   port?: number;
   host?: string;
@@ -17,7 +48,7 @@ export type TCaptchaServerOptions = {
 
 type TCallbackParams = { accessToken: string, error: null } | { accessToken: null, error: Error };
 
-function requestCaptchaTokenCallback(callback: (params: TCallbackParams) => void, { timeoutMs = 60_000, port = 8080, host = 'localhost', }: TCaptchaServerOptions) {
+function getCaptchaTokenCallback(callback: (params: TCallbackParams) => void, { timeoutMs = 60_000, port = 8080, host = 'localhost', }: TCaptchaHelperOptions) {
   const app = express();
   const callbackHost = `http://${host}:${port}`;
 
@@ -32,6 +63,8 @@ function requestCaptchaTokenCallback(callback: (params: TCallbackParams) => void
   );
 
   const onSuccess = (accessToken: string) => {
+    logger.info('Captcha token received');
+
     server.close();
     clearTimeout(timeout);
 
@@ -39,6 +72,8 @@ function requestCaptchaTokenCallback(callback: (params: TCallbackParams) => void
   };
 
   const onError = (error: Error) => {
+    logger.error('Failed to receive captcha token:', error.message);
+
     server.close();
     clearTimeout(timeout);
 
@@ -58,15 +93,17 @@ function requestCaptchaTokenCallback(callback: (params: TCallbackParams) => void
   });
 
   app.get('/*', (req, res) => {
-    res.send(indexFile.replaceAll('{{captchaUrl}}', captchaUrl.href));
+    res.send(indexHtml.replaceAll('{{captchaUrl}}', captchaUrl.href));
   });
+
+  logger.info('Starting server...');
 
   const server = app.listen(port, host, () => {
     logger.info(`Captcha server listening at ${callbackHost}`);
   });
 }
 
-export default function requestCaptchaToken(options: TCaptchaServerOptions = {}) {
+export function getCaptchaToken(options: TCaptchaHelperOptions = {}): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const callback = ({ accessToken, error, }: TCallbackParams) => {
       if (error) {
@@ -76,6 +113,6 @@ export default function requestCaptchaToken(options: TCaptchaServerOptions = {})
       }
     };
 
-    requestCaptchaTokenCallback(callback, options);
+    getCaptchaTokenCallback(callback, options);
   });
 }

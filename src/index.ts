@@ -6,13 +6,12 @@ import { TMFAInputProvider } from './auth/access-platform-client';
 import { TCategory } from './mobile-mint-client/_types';
 
 export { default as EncryptedFileSessionStore } from './common/session-store';
-export { default as requestCaptchaToken } from './auth/captcha-server';
+export * as MFAHelpers from './auth/mfa-helpers';
 
 export { ECategoryType } from './mobile-mint-client';
 export { EMFAInputType } from './auth/access-platform-client';
 export type { TUserDataResponse, TTransaction, TCategory } from './mobile-mint-client';
 export type { ISessionStore } from './common/session-store';
-export type { TCaptchaServerOptions } from './auth/captcha-server';
 
 export type TMintClientOptions = {
   username: string,
