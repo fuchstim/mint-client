@@ -5,8 +5,8 @@ import DataApiClient from './data-api-client';
 import { TMFAInputProvider } from './auth/access-platform-client';
 import { TCategory } from './mobile-mint-client/_types';
 
-export * as EncryptedFileSessionStore from './common/session-store';
-export * as requestCaptchaToken from './auth/captcha-server';
+export { default as EncryptedFileSessionStore } from './common/session-store';
+export { default as requestCaptchaToken } from './auth/captcha-server';
 
 export { ECategoryType } from './mobile-mint-client';
 export { EMFAInputType } from './auth/access-platform-client';
