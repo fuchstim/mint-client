@@ -5,8 +5,6 @@
     <img src="images/logotype.png" alt="Logo" width="400" height="80">
   </a>
 
-<h3 align="center">mint-client</h3>
-
   <p align="center">
     mint-client is an **unofficial** TypeScript library facilitating authentication and requests to the Intuit Mint platform
     <br />
