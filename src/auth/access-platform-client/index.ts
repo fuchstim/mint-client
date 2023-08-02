@@ -4,7 +4,7 @@ import jsonwebtoken, { JwtPayload } from 'jsonwebtoken';
 import Logger from '@ftim/logger';
 const logger = Logger.ns('Auth');
 
-import type SessionStore from '../../common/session-store';
+import type { ISessionStore } from '../../common/session-store';
 import Lock from '../../common/lock';
 
 import oauthClient, { TOAuthAuthorizationCodeResponse } from '../oauth-client';
@@ -15,7 +15,7 @@ import { EAuthChallengeType, TSession, TEvaluateAuthResponse, TVerifySignInRespo
 export { TSession, TMFAInputProvider, EMFAInputType };
 
 export type TAccessPlatformClient = {
-  sessionStore: SessionStore
+  sessionStore: ISessionStore
   username: string,
   password: string,
   mfaInputProvider: TMFAInputProvider,

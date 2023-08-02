@@ -1,4 +1,4 @@
-import SessionStore from './common/session-store';
+import EncryptedFileSessionStore, { ISessionStore } from './common/session-store';
 import AuthClient from './auth';
 import MobileMintClient, { TTransaction, TUserDataResponse } from './mobile-mint-client';
 import DataApiClient from './data-api-client';
@@ -6,20 +6,21 @@ import { TMFAInputProvider } from './auth/access-platform-client';
 import requestCaptchaToken from './auth/captcha-server';
 import { TCategory } from './mobile-mint-client/_types';
 
-export { SessionStore, requestCaptchaToken };
+export { EncryptedFileSessionStore, requestCaptchaToken };
 
 export type { TUserDataResponse, TTransaction, ECategoryType, TCategory } from './mobile-mint-client';
 export type { EMFAInputType } from './auth/access-platform-client';
+export type { ISessionStore } from './common/session-store';
 
 export type TMintClientOptions = {
   username: string,
   password: string,
   mfaInputProvider: TMFAInputProvider
-  sessionStore?: SessionStore
+  sessionStore?: ISessionStore
 };
 
 export default class MintClient {
-  private sessionStore: SessionStore;
+  private sessionStore: ISessionStore;
   private authClient: AuthClient;
   private mobileMintClient: MobileMintClient;
   private dataApiClient: DataApiClient;
@@ -27,7 +28,7 @@ export default class MintClient {
   constructor(options: TMintClientOptions) {
     const { username, password, mfaInputProvider, sessionStore, } = options;
 
-    this.sessionStore = sessionStore || new SessionStore({
+    this.sessionStore = sessionStore ?? new EncryptedFileSessionStore({
       identifier: username,
       secret: password,
     });

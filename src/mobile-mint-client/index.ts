@@ -6,14 +6,14 @@ import CookieStore from '../common/cookie-store';
 import Lock from '../common/lock';
 import dayjs from '../common/dayjs';
 
-import type SessionStore from '../common/session-store';
+import type { ISessionStore } from '../common/session-store';
 import type AuthClient from '../auth';
 
 import { BASE_URL, defaultHeaders, defaultMQPPRequestParams, defaultMQPPRequestPayload } from './_constants';
 import { ECategoryType, TCategory, TGetNewUuidResponse, TMMQPBundledRequestTypes, TMMQPRequestTypes, TProcessRequestTypes, TTransactionsResponse, TTransaction, TUserDataResponse } from './_types';
 
 export type TMobileMintClientOptions = {
-  sessionStore: SessionStore,
+  sessionStore: ISessionStore,
   authClient: AuthClient,
 };
 
@@ -34,7 +34,7 @@ const PRE_INIT_ENDPOINTS = [
 export { TUserDataResponse, TTransaction, ECategoryType, TCategory };
 
 export default class MobileMintClient {
-  private sessionStore: SessionStore;
+  private sessionStore: ISessionStore;
   private authClient: AuthClient;
   private client: AxiosInstance;
   private cookieStore: CookieStore = new CookieStore();

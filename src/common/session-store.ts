@@ -15,18 +15,23 @@ export type TSessionStore = {
   }
 };
 
-export type TSessionStoreOptions = {
+export interface ISessionStore {
+  set<K extends keyof TSessionStore>(key: K, value: TSessionStore[K]): void;
+  get<K extends keyof TSessionStore>(key: K): TSessionStore[K];
+}
+
+export type TEncryptedFileSessionStoreOptions = {
   identifier: string,
   secret: string,
 };
 
-export default class SessionStore {
+export default class EncryptedFileSessionStore implements ISessionStore {
   private identifier: string;
   private secret: string;
 
   private store: TSessionStore;
 
-  constructor({ identifier, secret, }: TSessionStoreOptions) {
+  constructor({ identifier, secret, }: TEncryptedFileSessionStoreOptions) {
     this.identifier = identifier;
     this.secret = secret;
 
