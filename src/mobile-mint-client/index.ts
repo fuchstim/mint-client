@@ -10,7 +10,7 @@ import type SessionStore from '../common/session-store';
 import type AuthClient from '../auth';
 
 import { BASE_URL, defaultHeaders, defaultMQPPRequestParams, defaultMQPPRequestPayload } from './_constants';
-import { TGetNewUuidResponse, TMMQPBundledRequestTypes, TMMQPRequestTypes, TProcessRequestTypes, TTransactionsResponse } from './_types';
+import { ECategoryType, TCategory, TGetNewUuidResponse, TMMQPBundledRequestTypes, TMMQPRequestTypes, TProcessRequestTypes, TTransactionsResponse, TTransaction, TUserDataResponse } from './_types';
 
 export type TMobileMintClientOptions = {
   sessionStore: SessionStore,
@@ -30,6 +30,8 @@ const PRE_INIT_ENDPOINTS = [
   'mobileLogin.xevent',
   'mobileSubmitDeviceToken.xevent',
 ];
+
+export { TUserDataResponse, TTransaction, ECategoryType, TCategory };
 
 export default class MobileMintClient {
   private sessionStore: SessionStore;

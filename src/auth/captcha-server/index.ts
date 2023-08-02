@@ -1,5 +1,7 @@
 import path from 'path';
 import fs from 'fs';
+import { URL } from 'url';
+
 import express from 'express';
 import Logger from '@ftim/logger';
 const logger = Logger.ns('CaptchaServer');
@@ -18,6 +20,11 @@ type TCallbackParams = { accessToken: string, error: null } | { accessToken: nul
 function requestCaptchaTokenCallback(callback: (params: TCallbackParams) => void, { timeoutMs = 60_000, port = 8080, host = 'localhost', }: TCaptchaServerOptions) {
   const app = express();
   const callbackHost = `http://${host}:${port}`;
+
+  const captchaUrl = new URL('https://accounts.intuit.com/recaptcha-native.html');
+  captchaUrl.searchParams.append('offering_id', 'Intuit.ifs.mint.3');
+  captchaUrl.searchParams.append('locale', 'en-ca');
+  captchaUrl.searchParams.append('redirect_url', `${callbackHost}/nativeredirect/v1`);
 
   const timeout = setTimeout(
     () => onError(new Error('Captcha request timed out')),
@@ -51,7 +58,7 @@ function requestCaptchaTokenCallback(callback: (params: TCallbackParams) => void
   });
 
   app.get('/*', (req, res) => {
-    res.send(indexFile.replaceAll('{{callbackHost}}', callbackHost));
+    res.send(indexFile.replaceAll('{{captchaUrl}}', captchaUrl.href));
   });
 
   const server = app.listen(port, host, () => {

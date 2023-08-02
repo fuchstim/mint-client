@@ -128,6 +128,40 @@ export type TUserDataResponse = {
   lastModified: number
 };
 
+export type TTransaction = {
+  originalDatePostedString: string,
+  datePostedString: string,
+  isPercent: boolean,
+  manualTransactionType: string,
+  userNote: string,
+  pending: string,
+  description: string,
+  percent: unknown | null,
+  cReport: string,
+  hasAttachment: boolean,
+  origDesc: string,
+  currency: string,
+  id: number,
+  amount: number,
+  checkNumber: unknown | null,
+  isParent: string,
+  duplicate: string,
+  version: string,
+  tags: unknown[],
+  accountId: 2460886,
+  isCheck: string,
+  mintDescription: string,
+  isBankCc: string,
+  commonMerchantId: unknown | null,
+  inferredCategoryId: number,
+  modifiedDate: number,
+  mReport: string,
+  isSoftDeleted: boolean,
+  isLinkedToRule: boolean,
+  categoryId: number,
+  transactionReviewState: string
+};
+
 export type TTransactionsResponse = {
   visibleDateFrom: number,
   visibleDateTo: number,
@@ -136,39 +170,31 @@ export type TTransactionsResponse = {
   modifiedFrom: number | null,
   earliestVisibleDateInFullResult: number,
   modifiedTo: number,
-  transactions: {
-    originalDatePostedString: string,
-    datePostedString: string,
-    isPercent: boolean,
-    manualTransactionType: string,
-    userNote: string,
-    pending: string,
-    description: string,
-    percent: unknown | null,
-    cReport: string,
-    hasAttachment: boolean,
-    origDesc: string,
-    currency: string,
-    id: number,
-    amount: number,
-    checkNumber: unknown | null,
-    isParent: string,
-    duplicate: string,
-    version: string,
-    tags: unknown[],
-    accountId: 2460886,
-    isCheck: string,
-    mintDescription: string,
-    isBankCc: string,
-    commonMerchantId: unknown | null,
-    inferredCategoryId: number,
-    modifiedDate: number,
-    mReport: string,
-    isSoftDeleted: boolean,
-    isLinkedToRule: boolean,
-    categoryId: number,
-    transactionReviewState: string
-  }[]
+  transactions: TTransaction[]
+};
+
+export enum ECategoryType {
+  EXPENSE = 'e',
+  INCOME = 'i',
+  NEITHER = 'n',
+}
+
+export type TCategory = {
+  id: number,
+  categoryType: ECategoryType,
+  depth: number,
+  categoryName: string,
+  notificationName: string,
+  parentId: number,
+  precedence: number,
+  standard: boolean,
+  modified: number,
+  isBusiness: boolean,
+  categoryFamily: string
+};
+
+export type TCategoriesResponse = {
+  entries: TCategory[]
 };
 
 export type TMMQPRequestType<E extends string, P, R> = {
@@ -228,26 +254,6 @@ export type TMMQPBundledRequestTypes = {
   >
 };
 
-export enum ECategoryType {
-  EXPENSE = 'e',
-  INCOME = 'i',
-  NEITHER = 'n',
-}
-
-export type TCategory = {
-  id: number,
-  categoryType: ECategoryType,
-  depth: number,
-  categoryName: string,
-  notificationName: string,
-  parentId: number,
-  precedence: number,
-  standard: boolean,
-  modified: number,
-  isBusiness: boolean,
-  categoryFamily: string
-};
-
 export type TProcessRequestType<K extends string, P, R> = {
   responseKey: K,
   payload: P,
@@ -258,6 +264,6 @@ export type TProcessRequestTypes = {
   getCategories: TProcessRequestType<
     'categoriesResponse',
     { includeDeletedCategories: boolean, modifiedFrom: string },
-    { entries: TCategory[] }
+    TCategoriesResponse
   >
 };

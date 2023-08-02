@@ -10,15 +10,15 @@ import Lock from '../../common/lock';
 import oauthClient, { TOAuthAuthorizationCodeResponse } from '../oauth-client';
 
 import { BASE_URL, EIntuitHeaderName, EMagicValues, MAX_AUTH_ATTEMPTS } from './_constants';
-import { EAuthChallengeType, TSession, TEvaluateAuthResponse, TVerifySignInResponse, TAuthChallenge, EUserInputType } from './_types';
+import { EAuthChallengeType, TSession, TEvaluateAuthResponse, TVerifySignInResponse, TAuthChallenge, EMFAInputType, TMFAInputProvider } from './_types';
 
-export { TSession, EUserInputType };
+export { TSession, TMFAInputProvider, EMFAInputType };
 
 export type TAccessPlatformClient = {
   sessionStore: SessionStore
   username: string,
   password: string,
-  userInputProvider: (type: EUserInputType) => Promise<string>,
+  mfaInputProvider: TMFAInputProvider,
 };
 
 const ACCESS_PLATFORM_CLIENT_LOCK = new Lock('access-platform-client');
@@ -27,16 +27,16 @@ export default class AccessPlatformClient {
   private sessionStore: TAccessPlatformClient['sessionStore'];
   private username: TAccessPlatformClient['username'];
   private password: TAccessPlatformClient['password'];
-  private userInputProvider: TAccessPlatformClient['userInputProvider'];
+  private mfaInputProvider: TAccessPlatformClient['mfaInputProvider'];
 
   private client: AxiosInstance;
   private session?: TSession;
 
-  constructor({ sessionStore, username, password, userInputProvider, }: TAccessPlatformClient) {
+  constructor({ sessionStore, username, password, mfaInputProvider, }: TAccessPlatformClient) {
     this.sessionStore = sessionStore;
     this.username = username;
     this.password = password;
-    this.userInputProvider = userInputProvider;
+    this.mfaInputProvider = mfaInputProvider;
 
     this.client = axios.create({
       baseURL: BASE_URL,
@@ -152,7 +152,7 @@ export default class AccessPlatformClient {
       captchaToken = undefined;
 
       if (evalResult.challenge[0].type === EAuthChallengeType.CAPTCHA) {
-        captchaToken = await this.userInputProvider(EUserInputType.CAPTCHA_TOKEN);
+        captchaToken = await this.mfaInputProvider(EMFAInputType.CAPTCHA_TOKEN);
 
         continue;
       }
@@ -379,11 +379,11 @@ export default class AccessPlatformClient {
     }
 
     const userInputType = {
-      [EAuthChallengeType.TOTP]: EUserInputType.TOTP,
-      [EAuthChallengeType.SMS_OTP]: EUserInputType.SMS_OTP,
-      [EAuthChallengeType.EMAIL_OTP]: EUserInputType.EMAIL_OTP,
+      [EAuthChallengeType.TOTP]: EMFAInputType.TOTP,
+      [EAuthChallengeType.SMS_OTP]: EMFAInputType.SMS_OTP,
+      [EAuthChallengeType.EMAIL_OTP]: EMFAInputType.EMAIL_OTP,
     }[type];
-    const token = await this.userInputProvider(userInputType);
+    const token = await this.mfaInputProvider(userInputType);
 
     const result = await this.submitChallenge(
       flowId,

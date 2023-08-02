@@ -1,74 +1,68 @@
-import fs from 'fs';
-import prompts from 'prompts';
-
 import SessionStore from './common/session-store';
 import AuthClient from './auth';
-import MobileMintClient from './mobile-mint-client';
+import MobileMintClient, { TTransaction, TUserDataResponse } from './mobile-mint-client';
 import DataApiClient from './data-api-client';
-import { EUserInputType } from './auth/access-platform-client';
+import { TMFAInputProvider } from './auth/access-platform-client';
 import requestCaptchaToken from './auth/captcha-server';
+import { TCategory } from './mobile-mint-client/_types';
 
-const { username, password, } = JSON.parse(fs.readFileSync('./.test-credentials.json', 'utf-8'));
+export { SessionStore, requestCaptchaToken };
 
-const sessionStore = new SessionStore({
-  identifier: username + '3',
-  secret: password,
-});
+export type { TUserDataResponse, TTransaction, ECategoryType, TCategory } from './mobile-mint-client';
+export type { EMFAInputType } from './auth/access-platform-client';
 
-const authClient = new AuthClient({
-  sessionStore,
-  username,
-  password,
-  userInputProvider: async type => {
-    if (type === EUserInputType.CAPTCHA_TOKEN) {
-      const captchaToken = await requestCaptchaToken();
-
-      return captchaToken;
-    }
-
-    const { input, } = await prompts({ type: 'text', name: 'input', message: `Enter ${type}`, });
-
-    return input;
-  },
-});
-
-const mobileMintClient = new MobileMintClient({
-  sessionStore,
-  authClient,
-});
-
-const dataApiClient = new DataApiClient(authClient);
-
-const run = async () => {
-  // const budgetSummary = await dataApiClient.query(
-  //   'getBudgetSummary',
-  //   { date: new Date(), }
-  // );
-
-  // debugger;
-
-  // const [ userProfile, categories, ] = await Promise.all([
-  //   ,
-  //   mobileMintClient.getCategories(),
-  // ]);
-
-  const userProfile = await mobileMintClient.getUserProfile();
-  const accountIds = userProfile.accounts.map(a => a.accountId);
-
-  const transactions = await mobileMintClient.getTransactions(
-    accountIds,
-    new Date(0),
-    new Date(),
-    100
-  );
-
-  debugger;
-
-  // fs.writeFileSync(
-  //   'transactions.json',
-  //   JSON.stringify(transactions, null, 2)
-  // );
+export type TMintClientOptions = {
+  username: string,
+  password: string,
+  mfaInputProvider: TMFAInputProvider
+  sessionStore?: SessionStore
 };
 
-run();
+export default class MintClient {
+  private sessionStore: SessionStore;
+  private authClient: AuthClient;
+  private mobileMintClient: MobileMintClient;
+  private dataApiClient: DataApiClient;
 
+  constructor(options: TMintClientOptions) {
+    const { username, password, mfaInputProvider, sessionStore, } = options;
+
+    this.sessionStore = sessionStore || new SessionStore({
+      identifier: username,
+      secret: password,
+    });
+
+    this.authClient = new AuthClient({
+      sessionStore: this.sessionStore,
+      username,
+      password,
+      mfaInputProvider,
+    });
+
+    this.mobileMintClient = new MobileMintClient({
+      sessionStore: this.sessionStore,
+      authClient: this.authClient,
+    });
+
+    this.dataApiClient = new DataApiClient(this.authClient);
+  }
+
+  async getUserProfile(): Promise<TUserDataResponse> {
+    const userProfile = await this.mobileMintClient.getUserProfile();
+
+    return userProfile;
+  }
+
+  async getCategories(): Promise<TCategory[]> {
+    const categories = await this.mobileMintClient.getCategories();
+
+    return categories.entries;
+  }
+
+  async getTransactions(accountIds: number[], fromDate: Date, toDate: Date, limit: number): Promise<TTransaction[]> {
+    const transactions = await this.mobileMintClient.getTransactions(accountIds, fromDate, toDate, limit);
+
+    return transactions;
+  }
+
+}

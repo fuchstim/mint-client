@@ -27,8 +27,7 @@
 </head>
 
 <body>
-  <iframe id="captchaFrame" onload="parseAccessToken()"
-    src="https://accounts.intuit.com/recaptcha-native.html?offering_id=Intuit.ifs.mint.3&redirect_url={{callbackHost}}/nativeredirect/v1&locale=en-ca" />
+  <iframe id="captchaFrame" onload="parseAccessToken()" src="{{captchaUrl}}" />
 </body>
 
 </html>

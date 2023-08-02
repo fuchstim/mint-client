@@ -55,9 +55,11 @@ export type TSession = {
   refreshTokenExpiresAt: number,
 };
 
-export enum EUserInputType {
+export enum EMFAInputType {
   CAPTCHA_TOKEN = 'CAPTCHA_TOKEN',
   TOTP = 'TOTP',
   SMS_OTP = 'SMS_OTP',
   EMAIL_OTP = 'EMAIL_OTP',
 }
+
+export type TMFAInputProvider = (type: EMFAInputType) => Promise<string>;
