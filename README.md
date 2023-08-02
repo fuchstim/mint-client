@@ -6,7 +6,7 @@
   </a>
 
   <p align="center">
-    mint-client is an **unofficial** TypeScript library facilitating authentication and requests to the Intuit Mint platform
+    mint-client is an <b>unofficial</b> TypeScript library facilitating authentication and requests to the Intuit Mint platform
     <br />
     <a href="https://github.com/fuchstim/mint-client/wiki"><strong>Explore the docs »</strong></a>
     <br />
