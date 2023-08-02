@@ -3,14 +3,16 @@ import AuthClient from './auth';
 import MobileMintClient, { TTransaction, TUserDataResponse } from './mobile-mint-client';
 import DataApiClient from './data-api-client';
 import { TMFAInputProvider } from './auth/access-platform-client';
-import requestCaptchaToken from './auth/captcha-server';
 import { TCategory } from './mobile-mint-client/_types';
 
-export { EncryptedFileSessionStore, requestCaptchaToken };
+export * as EncryptedFileSessionStore from './common/session-store';
+export * as requestCaptchaToken from './auth/captcha-server';
 
-export type { TUserDataResponse, TTransaction, ECategoryType, TCategory } from './mobile-mint-client';
-export type { EMFAInputType } from './auth/access-platform-client';
+export { ECategoryType } from './mobile-mint-client';
+export { EMFAInputType } from './auth/access-platform-client';
+export type { TUserDataResponse, TTransaction, TCategory } from './mobile-mint-client';
 export type { ISessionStore } from './common/session-store';
+export type { TCaptchaServerOptions } from './auth/captcha-server';
 
 export type TMintClientOptions = {
   username: string,

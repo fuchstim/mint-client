@@ -25,3 +25,4 @@ Please refer to the installation and usage guides in the [project wiki](https://
 
 - [ ] Implement retrieving history data (net worth, income, spending)
 - [ ] Implement retrieving budget statistics
+- [ ] Implement logout method
