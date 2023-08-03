@@ -6,12 +6,15 @@ import { TOTPProviders } from './auth/access-platform-client';
 import { TCategory } from './mobile-mint-client/_types';
 
 export { default as EncryptedFileSessionStore } from './common/session-store';
+export type { ISessionStore } from './common/session-store';
+
 export * as OTPProviders from './auth/otp-providers';
+export type { IOTPProvider } from './auth/otp-providers';
+
+export { EOTPType } from './auth/access-platform-client';
 
 export { ECategoryType } from './mobile-mint-client';
-export { EOTPType } from './auth/access-platform-client';
 export type { TUserDataResponse, TTransaction, TCategory } from './mobile-mint-client';
-export type { ISessionStore } from './common/session-store';
 
 export type TMintClientOptions = {
   username: string,
