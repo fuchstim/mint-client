@@ -205,6 +205,9 @@ export default class AccessPlatformClient {
     const supportedChallenges = availableChallenges.filter(({ type, }) => supportedChallengeTypes.includes(type));
 
     const challenge = supportedChallenges.find(({ primary, }) => primary) ?? supportedChallenges[0];
+    if (!challenge) {
+      throw new Error(`No supported challenge found: ${availableChallenges.map(({ type, }) => type).join(', ')}`);
+    }
 
     switch (challenge.type) {
       case EAuthChallengeType.PASSWORD:
