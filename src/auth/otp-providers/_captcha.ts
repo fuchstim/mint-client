@@ -54,7 +54,7 @@ export class CaptchaOTPProvider implements IOTPProvider {
   private port: number;
   private host: string;
 
-  constructor(options: TCaptchaOTPProviderOptions) {
+  constructor(options: TCaptchaOTPProviderOptions = {}) {
     this.timeoutMs = options.timeoutMs ?? 60_000;
     this.port = options.port ?? 8080;
     this.host = options.host ?? 'localhost';

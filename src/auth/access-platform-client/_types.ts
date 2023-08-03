@@ -64,4 +64,4 @@ export enum EOTPType {
   EMAIL_OTP = 'EMAIL_OTP',
 }
 
-export type TOTPProviders = Record<EOTPType, IOTPProvider>;
+export type TOTPProviders = Partial<Record<EOTPType, IOTPProvider>>;
