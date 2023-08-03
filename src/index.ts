@@ -1,3 +1,6 @@
+import Logger from '@ftim/logger';
+Logger.setPrefix('MintClient');
+
 import EncryptedFileSessionStore, { ISessionStore } from './common/session-store';
 import AuthClient from './auth';
 import MobileMintClient, { TTransaction, TUserDataResponse } from './mobile-mint-client';
