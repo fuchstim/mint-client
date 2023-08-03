@@ -150,7 +150,6 @@ export default class AccessPlatformClient {
       }
 
       captchaToken = undefined;
-
       if (evalResult.challenge[0].type === EAuthChallengeType.CAPTCHA) {
         captchaToken = await this.getOTPCode(EOTPType.CAPTCHA_TOKEN);
 
@@ -200,9 +199,7 @@ export default class AccessPlatformClient {
   ) {
     const supportedChallengeTypes = [
       EAuthChallengeType.PASSWORD,
-      EAuthChallengeType.TOTP,
-      EAuthChallengeType.SMS_OTP,
-      EAuthChallengeType.EMAIL_OTP,
+      ...Object.keys(this.otpProviders),
     ];
 
     const supportedChallenges = availableChallenges.filter(({ type, }) => supportedChallengeTypes.includes(type));
