@@ -458,7 +458,7 @@ export default class AccessPlatformClient {
   }
 
   private async getOTPCode(type: EOTPType) {
-    const otpProvider = this.otpProviders[EOTPType.CAPTCHA_TOKEN];
+    const otpProvider = this.otpProviders[type];
     if (!otpProvider) {
       throw new Error(`No OTP provider found for ${type}`);
     }
