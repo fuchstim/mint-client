@@ -24,6 +24,6 @@ Please refer to the installation and usage guides in the [project wiki](https://
 ## Roadmap
 
 - [x] Generalize OTPProvider Interface
-- [] Implement retrieving history data (net worth, income, spending)
-- [] Implement retrieving budget statistics
-- [] Implement logout method
+- [ ] Implement retrieving history data (net worth, income, spending)
+- [ ] Implement retrieving budget statistics
+- [ ] Implement logout method
