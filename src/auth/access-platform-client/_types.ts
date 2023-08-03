@@ -1,3 +1,5 @@
+import { IOTPProvider } from '../otp-providers';
+
 export type TAuthTokenFormat = {
   type: 'numeric',
   minLength: number,
@@ -55,11 +57,11 @@ export type TSession = {
   refreshTokenExpiresAt: number,
 };
 
-export enum EMFAInputType {
+export enum EOTPType {
   CAPTCHA_TOKEN = 'CAPTCHA_TOKEN',
   TOTP = 'TOTP',
   SMS_OTP = 'SMS_OTP',
   EMAIL_OTP = 'EMAIL_OTP',
 }
 
-export type TMFAInputProvider = (type: EMFAInputType) => Promise<string>;
+export type TOTPProviders = Record<EOTPType, IOTPProvider>;

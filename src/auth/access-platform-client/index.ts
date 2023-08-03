@@ -10,15 +10,15 @@ import Lock from '../../common/lock';
 import oauthClient, { TOAuthAuthorizationCodeResponse } from '../oauth-client';
 
 import { BASE_URL, EIntuitHeaderName, EMagicValues, MAX_AUTH_ATTEMPTS } from './_constants';
-import { EAuthChallengeType, TSession, TEvaluateAuthResponse, TVerifySignInResponse, TAuthChallenge, EMFAInputType, TMFAInputProvider } from './_types';
+import { EAuthChallengeType, TSession, TEvaluateAuthResponse, TVerifySignInResponse, TAuthChallenge, EOTPType, TOTPProviders } from './_types';
 
-export { TSession, TMFAInputProvider, EMFAInputType };
+export { TSession, TOTPProviders, EOTPType };
 
 export type TAccessPlatformClient = {
   sessionStore: ISessionStore
   username: string,
   password: string,
-  mfaInputProvider: TMFAInputProvider,
+  otpProviders: TOTPProviders,
 };
 
 const ACCESS_PLATFORM_CLIENT_LOCK = new Lock('access-platform-client');
@@ -27,16 +27,16 @@ export default class AccessPlatformClient {
   private sessionStore: TAccessPlatformClient['sessionStore'];
   private username: TAccessPlatformClient['username'];
   private password: TAccessPlatformClient['password'];
-  private mfaInputProvider: TAccessPlatformClient['mfaInputProvider'];
+  private otpProviders: TAccessPlatformClient['otpProviders'];
 
   private client: AxiosInstance;
   private session?: TSession;
 
-  constructor({ sessionStore, username, password, mfaInputProvider, }: TAccessPlatformClient) {
+  constructor({ sessionStore, username, password, otpProviders, }: TAccessPlatformClient) {
     this.sessionStore = sessionStore;
     this.username = username;
     this.password = password;
-    this.mfaInputProvider = mfaInputProvider;
+    this.otpProviders = otpProviders;
 
     this.client = axios.create({
       baseURL: BASE_URL,
@@ -152,7 +152,7 @@ export default class AccessPlatformClient {
       captchaToken = undefined;
 
       if (evalResult.challenge[0].type === EAuthChallengeType.CAPTCHA) {
-        captchaToken = await this.mfaInputProvider(EMFAInputType.CAPTCHA_TOKEN);
+        captchaToken = await this.getOTPCode(EOTPType.CAPTCHA_TOKEN);
 
         continue;
       }
@@ -378,12 +378,12 @@ export default class AccessPlatformClient {
       );
     }
 
-    const userInputType = {
-      [EAuthChallengeType.TOTP]: EMFAInputType.TOTP,
-      [EAuthChallengeType.SMS_OTP]: EMFAInputType.SMS_OTP,
-      [EAuthChallengeType.EMAIL_OTP]: EMFAInputType.EMAIL_OTP,
+    const otpType = {
+      [EAuthChallengeType.TOTP]: EOTPType.TOTP,
+      [EAuthChallengeType.SMS_OTP]: EOTPType.SMS_OTP,
+      [EAuthChallengeType.EMAIL_OTP]: EOTPType.EMAIL_OTP,
     }[type];
-    const token = await this.mfaInputProvider(userInputType);
+    const token = await this.getOTPCode(otpType);
 
     const result = await this.submitChallenge(
       flowId,
@@ -458,6 +458,17 @@ export default class AccessPlatformClient {
         },
       }
     );
+  }
+
+  private async getOTPCode(type: EOTPType) {
+    const otpProvider = this.otpProviders[EOTPType.CAPTCHA_TOKEN];
+    if (!otpProvider) {
+      throw new Error(`No OTP provider found for ${type}`);
+    }
+
+    const token = await otpProvider.getCode();
+
+    return token;
   }
 
   private hydrateSession() {

@@ -23,7 +23,7 @@ Please refer to the installation and usage guides in the [project wiki](https://
 
 ## Roadmap
 
-- [ ] Implement retrieving history data (net worth, income, spending)
-- [ ] Implement retrieving budget statistics
-- [ ] Implement logout method
-- [ ] Generalize MFAProvider Interface
+- [x] Generalize OTPProvider Interface
+- [] Implement retrieving history data (net worth, income, spending)
+- [] Implement retrieving budget statistics
+- [] Implement logout method
