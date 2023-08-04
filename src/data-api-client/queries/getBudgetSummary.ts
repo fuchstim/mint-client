@@ -1,8 +1,4 @@
-import dayjs from '../../common/dayjs';
-
-import type { TQuery } from '.';
-
-const query = /* GraphQL */`
+export const GetRegularUserBudgetsWithSpendSummaryQuery = /* GraphQL */`
   query GetRegularUserBudgetsWithSpendSummary($budgetFilter: BudgetFilter, $budgetSortOrder: BudgetSortOrder, $unbudgetedExpenseFilter: UnbudgetedExpenseFilter, $spendSummaryFilter: SpendSummaryFilter) {
     consumer {
       finance {
@@ -91,6 +87,7 @@ const query = /* GraphQL */`
       }
     }
   }
+
   fragment BudgetCategorySource on CategorySource {
     id
     type
@@ -99,45 +96,4 @@ const query = /* GraphQL */`
     parentId
     parentName
   }
-`;
-
-export default {
-  operationName: 'GetRegularUserBudgetsWithSpendSummary',
-  query,
-  toVariables({ date, }) {
-    const firstOfMonth = dayjs(date).startOf('month').format('YYYY-MM-DD');
-
-    return {
-      budgetFilter: {
-        endDate: firstOfMonth,
-        startDate: firstOfMonth,
-      },
-      budgetSortOrder: null,
-      spendSummaryFilter: {
-        endDate: firstOfMonth,
-        startDate: firstOfMonth,
-      },
-      unbudgetedExpenseFilter: {
-        endDate: firstOfMonth,
-        startDate: firstOfMonth,
-      },
-    };
-  },
-} as TQuery<
-  { date: Date },
-  {
-    budgetFilter: {
-      endDate: string,
-      startDate: string,
-    },
-    budgetSortOrder: null,
-    spendSummaryFilter: {
-      endDate: string,
-      startDate: string,
-    },
-    unbudgetedExpenseFilter: {
-      endDate: string,
-      startDate: string,
-    },
-  }
->;
+` as const;

@@ -1,8 +1,4 @@
-import dayjs from '../../common/dayjs';
-
-import type { TQuery } from '.';
-
-const query = /* GraphQL */`
+export const MintOverviewChartQuery = /* GraphQL */`
   query MintOverviewChart($currentDate: String!, $reportType: String, $timeframe: MintMercuryChartTimeframeType, $categoryId: Int) {
     consumer {
       finance {
@@ -61,26 +57,4 @@ const query = /* GraphQL */`
       }
     }
   }
-`;
-
-export enum EReportType {
-  SPENDING = 'SPENDING',
-}
-
-export enum ETimeframe {
-  MONTH = '_30D',
-}
-
-export default {
-  operationName: 'MintOverviewChart',
-  query,
-  toVariables: ({ date, reportType, timeframe, }) => ({
-    categoryId: null,
-    currentDate: dayjs(date).format('YYYY-MM-DD'),
-    reportType,
-    timeframe,
-  }),
-} as TQuery<
-  { date: Date, reportType: EReportType, timeframe: ETimeframe, },
-  { categoryId: null, currentDate: string, reportType: string, timeframe: string, }
->;
+` as const;

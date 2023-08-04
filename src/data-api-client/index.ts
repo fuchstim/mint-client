@@ -5,9 +5,10 @@ import type AuthClient from '../auth';
 import dayjs from '../common/dayjs';
 
 import { BASE_URL, EIntuitHeaderName, defaultHeaders } from './_constants';
-import { queries } from './queries';
+import type { TQueries } from './_types';
 
-type TQueries = typeof queries;
+import { GetRegularUserBudgetsWithSpendSummaryQuery } from './queries/getBudgetSummary';
+import { MintOverviewChartQuery } from './queries/getOverviewChart';
 
 export default class DataApiClient {
   private client: AxiosInstance;
@@ -31,19 +32,64 @@ export default class DataApiClient {
     });
   }
 
-  async query<T extends keyof TQueries>(
-    queryName: T,
-    parameters: Parameters<TQueries[T]['toVariables']>[0]
-  ) {
-    const { operationName, query, toVariables, } = queries[queryName];
+  async getBudgetSummary(date: Date) {
+    const firstOfMonth = dayjs(date).startOf('month').format('YYYY-MM-DD');
 
-    const { data, } = await this.client.post(
+    const variables = {
+      budgetFilter: {
+        endDate: firstOfMonth,
+        startDate: firstOfMonth,
+      },
+      budgetSortOrder: null,
+      spendSummaryFilter: {
+        endDate: firstOfMonth,
+        startDate: firstOfMonth,
+      },
+      unbudgetedExpenseFilter: {
+        endDate: firstOfMonth,
+        startDate: firstOfMonth,
+      },
+    };
+
+    const budgetSummary = await this.query(
+      'GetRegularUserBudgetsWithSpendSummary',
+      GetRegularUserBudgetsWithSpendSummaryQuery,
+      variables
+    );
+
+    return budgetSummary;
+  }
+
+  async getOverviewChart(
+    date: Date,
+    reportType: TQueries['MintOverviewChart']['variables']['reportType'],
+    timeframe: TQueries['MintOverviewChart']['variables']['timeframe']
+  ) {
+    const variables = {
+      categoryId: null,
+      currentDate: dayjs(date).format('YYYY-MM-DD'),
+      reportType,
+      timeframe,
+    };
+
+    const overviewChart = await this.query(
+      'MintOverviewChart',
+      MintOverviewChartQuery,
+      variables
+    );
+
+    return overviewChart;
+  }
+
+  private async query<N extends keyof TQueries>(
+    operationName: N,
+    query: TQueries[N]['query'],
+    variables: TQueries[N]['variables']
+  ): Promise<TQueries[N]['response']> {
+    const { data, } = await this.client.post<TQueries[N]['response']>(
       'graphql',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { operationName, query, variables: toVariables(parameters as any), },
-      {
-        headers: { 'X-APOLLO-OPERATION-NAME': operationName, },
-      }
+      { operationName, query, variables, },
+      { headers: { 'X-APOLLO-OPERATION-NAME': operationName, }, }
     );
 
     return data;

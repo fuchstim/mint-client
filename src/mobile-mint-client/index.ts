@@ -10,7 +10,7 @@ import type { ISessionStore } from '../common/session-store';
 import type AuthClient from '../auth';
 
 import { BASE_URL, defaultHeaders, defaultMQPPRequestParams, defaultMQPPRequestPayload } from './_constants';
-import { ECategoryType, TCategory, TGetNewUuidResponse, TMMQPBundledRequestTypes, TMMQPRequestTypes, TProcessRequestTypes, TTransactionsResponse, TTransaction, TUserDataResponse } from './_types';
+import { ECategoryType, TCategory, TGetNewUuidResponse, TMMQPBundledRequestTypes, TMMQPRequestTypes, TProcessRequestTypes, TTransactionsResponse, TTransaction, TUserDataResponse, TNetworthResponse } from './_types';
 
 export type TMobileMintClientOptions = {
   sessionStore: ISessionStore,
@@ -31,7 +31,7 @@ const PRE_INIT_ENDPOINTS = [
   'mobileSubmitDeviceToken.xevent',
 ];
 
-export { TUserDataResponse, TTransaction, ECategoryType, TCategory };
+export { TUserDataResponse, TTransaction, ECategoryType, TCategory, TNetworthResponse };
 
 export default class MobileMintClient {
   private sessionStore: ISessionStore;
@@ -102,7 +102,7 @@ export default class MobileMintClient {
       { includeDeletedCategories, modifiedFrom: '0', }
     );
 
-    return categories;
+    return categories.entries;
   }
 
   async getTransactions(accountIds: number[], fromDate: Date, toDate: Date, limit: number) {
@@ -152,6 +152,26 @@ export default class MobileMintClient {
     return transactions
       .sort((a, b) => dayjs(b.datePostedString, 'YYYYMMDD').valueOf() - dayjs(a.datePostedString, 'YYYYMMDD').valueOf())
       .slice(0, limit);
+  }
+
+  async getNetworth(fromDate: Date, toDate: Date) {
+    const headers = {
+      Accept: 'application/json',
+      'User-Agent': 'ios',
+      'app-version': '150.70.0',
+    };
+
+    const params = {
+      fromDate: dayjs(fromDate).format('YYYYMMDD'),
+      toDate: dayjs(toDate).format('YYYYMMDD'),
+    };
+
+    const { data: networth, } = await this.client.get<TNetworthResponse>(
+      'pfm/v1/networth',
+      { headers, params, }
+    );
+
+    return networth;
   }
 
   private async initSafe() {

@@ -197,6 +197,13 @@ export type TCategoriesResponse = {
   entries: TCategory[]
 };
 
+export type TNetworthResponse = {
+  netWorthEnd: string,
+  netWorthStart: string,
+  netWorthEndDate: string,
+  deltaNetworth: string,
+};
+
 export type TMMQPRequestType<E extends string, P, R> = {
   endpoint: E,
   payload: P,
