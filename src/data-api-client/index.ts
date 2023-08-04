@@ -57,7 +57,7 @@ export default class DataApiClient {
       variables
     );
 
-    return budgetSummary;
+    return budgetSummary.data;
   }
 
   async getOverviewChart(
@@ -78,7 +78,7 @@ export default class DataApiClient {
       variables
     );
 
-    return overviewChart;
+    return overviewChart.data;
   }
 
   private async query<N extends keyof TQueries>(
