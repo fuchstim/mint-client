@@ -100,7 +100,7 @@ type TGetOverviewChartQueryResponse = {
         mintOverviewChart: {
           currency: string,
           currentDate: string,
-          delta: null | unknown,
+          delta: null | number,
           dataPoints: {
             date: string,
             value: number,
@@ -123,8 +123,8 @@ type TGetOverviewChartQueryResponse = {
           categoryId: null | unknown,
           heroMainValue: number,
           reportType: string,
-          subHeaderText: null | unknown,
-          subHeaderValue: null | unknown,
+          subHeaderText: null | string,
+          subHeaderValue: null | number,
           timeframe: string,
         },
       },
