@@ -8,7 +8,7 @@
   <p align="center">
     mint-client is an <b>unofficial</b> TypeScript library facilitating authentication and requests to the Intuit Mint platform
     <br />
-    <a href="https://fuchstim.github.io/mint-client/classes/MintClient.html"><strong>Explore the docs »</strong></a>
+    <a href="https://fuchstim.github.io/mint-client/classes/MintClient.html" target="_blank"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/fuchstim/mint-client/issues">Report Bug</a>
