@@ -12,7 +12,7 @@ export type { ISessionStore } from './common/session-store';
 
 export * as OTPProviders from './auth/otp-providers';
 
-export { EOTPType } from './auth/access-platform-client';
+export { EOTPType, TOTPProviders } from './auth/access-platform-client';
 
 export { ECategoryType } from './mobile-mint-client';
 export type { TUserDataResponse, TTransaction, TCategory, TNetworthResponse } from './mobile-mint-client';
