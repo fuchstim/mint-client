@@ -31,6 +31,29 @@ export type TMintClientOptions = {
   sessionStore?: ISessionStore
 };
 
+/**
+ * @example
+ * ```typescript
+ * import MintClient, { EOTPType, OTPProviders } from '@ftim/mint-client';
+ *
+ * const client = new MintClient({
+ *   username: 'supersaver',
+ *   password: 'supersecurepassword',
+ *   otpProviders: {
+ *     [EOTPType.CAPTCHA_TOKEN]: new OTPProviders.CaptchaOTPProvider(),
+ *     [EOTPType.TOTP]: new OTPProviders.TOTPProvider('TOTPSECRET'),
+ *     [EOTPType.EMAIL_OTP]: new OTPProviders.EmailOTPProvider({
+ *       host: 'imap.gmail.com',
+ *       port: 993,
+ *       auth: {
+ *         user: 'supersaver@gmail.com',
+ *         pass: 'supersecurepassword',
+ *       },
+ *     }),
+ *   },
+ * });
+ * ```
+ */
 export default class MintClient {
   private sessionStore: ISessionStore;
   private authClient: AuthClient;
