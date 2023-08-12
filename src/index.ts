@@ -83,38 +83,38 @@ export default class MintClient {
     this.dataApiClient = new DataApiClient(this.authClient);
   }
 
-  async getUserProfile(...params: Parameters<MobileMintClient['getUserProfile']>): ReturnType<MobileMintClient['getUserProfile']> {
+  async getUserProfile(): ReturnType<MobileMintClient['getUserProfile']> {
     const userProfile = await this.mobileMintClient.getUserProfile();
 
     return userProfile;
   }
 
-  async getCategories(...params: Parameters<MobileMintClient['getCategories']>): ReturnType<MobileMintClient['getCategories']> {
-    const categories = await this.mobileMintClient.getCategories();
+  async getCategories(options: Parameters<MobileMintClient['getCategories']>[0]): ReturnType<MobileMintClient['getCategories']> {
+    const categories = await this.mobileMintClient.getCategories(options);
 
     return categories;
   }
 
-  async getTransactions(...params: Parameters<MobileMintClient['getTransactions']>): ReturnType<MobileMintClient['getTransactions']> {
-    const transactions = await this.mobileMintClient.getTransactions(...params);
+  async getTransactions(options: Parameters<MobileMintClient['getTransactions']>[0]): ReturnType<MobileMintClient['getTransactions']> {
+    const transactions = await this.mobileMintClient.getTransactions(options);
 
     return transactions;
   }
 
-  async getNetworth(...params: Parameters<MobileMintClient['getNetworth']>): ReturnType<MobileMintClient['getNetworth']> {
-    const networth = await this.mobileMintClient.getNetworth(...params);
+  async getNetworth(options: Parameters<MobileMintClient['getNetworth']>[0]): ReturnType<MobileMintClient['getNetworth']> {
+    const networth = await this.mobileMintClient.getNetworth(options);
 
     return networth;
   }
 
-  async getBudgetSummary(...params: Parameters<DataApiClient['getBudgetSummary']>): ReturnType<DataApiClient['getBudgetSummary']> {
-    const budgetSummary = await this.dataApiClient.getBudgetSummary(...params);
+  async getBudgetSummary(options: Parameters<DataApiClient['getBudgetSummary']>[0]): ReturnType<DataApiClient['getBudgetSummary']> {
+    const budgetSummary = await this.dataApiClient.getBudgetSummary(options);
 
     return budgetSummary;
   }
 
-  async getOverviewChart(...params: Parameters<DataApiClient['getOverviewChart']>): ReturnType<DataApiClient['getOverviewChart']> {
-    const overviewChart = await this.dataApiClient.getOverviewChart(...params);
+  async getOverviewChart(options: Parameters<DataApiClient['getOverviewChart']>[0]): ReturnType<DataApiClient['getOverviewChart']> {
+    const overviewChart = await this.dataApiClient.getOverviewChart(options);
 
     return overviewChart;
   }

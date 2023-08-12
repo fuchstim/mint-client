@@ -95,7 +95,9 @@ export default class MobileMintClient {
     return userProfile;
   }
 
-  async getCategories(includeDeletedCategories: boolean = true) {
+  async getCategories(params: { includeDeletedCategories?: boolean } = {}) {
+    const { includeDeletedCategories = false, } = params;
+
     const categories = await this.processRequest(
       'getCategories',
       'categoriesResponse',
@@ -105,7 +107,9 @@ export default class MobileMintClient {
     return categories.entries;
   }
 
-  async getTransactions(accountIds: number[], fromDate: Date, toDate: Date, limit: number) {
+  async getTransactions(options: { accountIds: number[], fromDate: Date, toDate: Date, limit: number}) {
+    const { accountIds, fromDate, toDate, limit, } = options;
+
     const MAX_PAGE_SIZE = 500;
 
     // Returns most recent transactions, ordered by date ascending, up to limit
@@ -154,7 +158,9 @@ export default class MobileMintClient {
       .slice(0, limit);
   }
 
-  async getNetworth(fromDate: Date, toDate: Date) {
+  async getNetworth(options: { fromDate: Date, toDate: Date }) {
+    const { fromDate, toDate, } = options;
+
     const headers = {
       Accept: 'application/json',
       'User-Agent': 'ios',

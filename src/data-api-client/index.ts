@@ -32,7 +32,9 @@ export default class DataApiClient {
     });
   }
 
-  async getBudgetSummary(date: Date) {
+  async getBudgetSummary(options: { date: Date }) {
+    const { date, } = options;
+
     const firstOfMonth = dayjs(date).startOf('month').format('YYYY-MM-DD');
 
     const variables = {
@@ -60,11 +62,13 @@ export default class DataApiClient {
     return budgetSummary.data;
   }
 
-  async getOverviewChart(
+  async getOverviewChart(options: {
     date: Date,
     reportType: TQueries['MintOverviewChart']['variables']['reportType'],
     timeframe: TQueries['MintOverviewChart']['variables']['timeframe']
-  ) {
+  }) {
+    const { date, reportType, timeframe, } = options;
+
     const variables = {
       categoryId: null,
       currentDate: dayjs(date).format('YYYY-MM-DD'),
