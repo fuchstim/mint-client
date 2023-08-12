@@ -58,9 +58,13 @@ export type TSession = {
 };
 
 export enum EOTPType {
+  /** Captcha token OTP. See {@link OTPProviders.CaptchaOTPProvider} for example implementation */
   CAPTCHA_TOKEN = 'CAPTCHA_TOKEN',
+  /** Time-based OTP. See {@link OTPProviders.TOTPProvider} for example implementation */
   TOTP = 'TOTP',
+  /** SMS OTP */
   SMS_OTP = 'SMS_OTP',
+  /** Email OTP. See {@link OTPProviders.EmailOTPProvider} for example implementation */
   EMAIL_OTP = 'EMAIL_OTP',
 }
 

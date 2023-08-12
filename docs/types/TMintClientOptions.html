@@ -16,19 +16,34 @@
 <li><a href="TMintClientOptions.html">TMintClientOptions</a></li></ul>
 <h1>Type alias TMintClientOptions</h1></div>
 <div class="tsd-signature"><span class="tsd-kind-type-alias">TMint<wbr/>Client<wbr/>Options</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{ </span><br/><span>    </span><span class="tsd-kind-property">otpProviders</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">TOTPProviders</span><span class="tsd-signature-symbol">; </span><br/><span>    </span><span class="tsd-kind-property">password</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span><span class="tsd-kind-property">sessionStore</span><span class="tsd-signature-symbol">?: </span><a href="../interfaces/ISessionStore.html" class="tsd-signature-type tsd-kind-interface">ISessionStore</a><span class="tsd-signature-symbol">; </span><br/><span>    </span><span class="tsd-kind-property">username</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span></div>
+<div class="tsd-comment tsd-typography"><p>Mint client options</p>
+</div>
 <div class="tsd-type-declaration">
 <h4>Type declaration</h4>
 <ul class="tsd-parameters">
 <li class="tsd-parameter">
-<h5><span class="tsd-kind-property">otp<wbr/>Providers</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">TOTPProviders</span></h5></li>
+<h5><span class="tsd-kind-property">otp<wbr/>Providers</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">TOTPProviders</span></h5>
+<div class="tsd-comment tsd-typography"><p>A list of providers that will return a one-time-password when requested during the initial sign-in process. Read more <a href="../enums/EOTPType.html" class="tsd-kind-enum">here</a> about the different OTP token types.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div></li>
 <li class="tsd-parameter">
-<h5><span class="tsd-kind-property">password</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></h5></li>
+<h5><span class="tsd-kind-property">password</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></h5>
+<div class="tsd-comment tsd-typography"><p>The password used to sign into your Intuit account</p>
+</div>
+<div class="tsd-comment tsd-typography"></div></li>
 <li class="tsd-parameter">
-<h5><code class="tsd-tag ts-flagOptional">Optional</code> <span class="tsd-kind-property">session<wbr/>Store</span><span class="tsd-signature-symbol">?: </span><a href="../interfaces/ISessionStore.html" class="tsd-signature-type tsd-kind-interface">ISessionStore</a></h5></li>
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> <span class="tsd-kind-property">session<wbr/>Store</span><span class="tsd-signature-symbol">?: </span><a href="../interfaces/ISessionStore.html" class="tsd-signature-type tsd-kind-interface">ISessionStore</a></h5>
+<div class="tsd-comment tsd-typography"><p>A class implementing <a href="../interfaces/ISessionStore.html" class="tsd-kind-interface">ISessionStore</a>. Effectively a key-value store to persist and retrieve various information related to the current authentication session (e.g. authorization and refresh tokens). Defaults to <a href="../classes/EncryptedFileSessionStore.html" class="tsd-kind-class">EncryptedFileSessionStore</a> using the above username &amp; password as credentials.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div></li>
 <li class="tsd-parameter">
-<h5><span class="tsd-kind-property">username</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></h5></li></ul></div><aside class="tsd-sources">
+<h5><span class="tsd-kind-property">username</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></h5>
+<div class="tsd-comment tsd-typography"><p>The username or email used to sign into your Intuit account</p>
+</div>
+<div class="tsd-comment tsd-typography"></div></li></ul></div>
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/fuchstim/mint-client/blob/49c56c8/src/index.ts#L20">index.ts:20</a></li></ul></aside></div>
+<li>Defined in <a href="https://github.com/fuchstim/mint-client/blob/ed62391/src/index.ts#L23">index.ts:23</a></li></ul></aside></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">

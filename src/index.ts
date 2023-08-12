@@ -17,10 +17,17 @@ export { EOTPType } from './auth/access-platform-client';
 export { ECategoryType } from './mobile-mint-client';
 export type { TUserDataResponse, TTransaction, TCategory, TNetworthResponse } from './mobile-mint-client';
 
+/**
+ * Mint client options
+ */
 export type TMintClientOptions = {
+  /** The username or email used to sign into your Intuit account */
   username: string,
+  /** The password used to sign into your Intuit account */
   password: string,
+  /** A list of providers that will return a one-time-password when requested during the initial sign-in process. Read more {@link EOTPType | here} about the different OTP token types. */
   otpProviders: TOTPProviders
+  /** A class implementing {@link ISessionStore}. Effectively a key-value store to persist and retrieve various information related to the current authentication session (e.g. authorization and refresh tokens). Defaults to {@link EncryptedFileSessionStore} using the above username & password as credentials. */
   sessionStore?: ISessionStore
 };
 
