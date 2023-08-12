@@ -1,11 +1,14 @@
-import Logger from '@ftim/logger';
-Logger.setPrefix('MintClient');
+import type { ILogTransport } from '@ftim/logger';
+export type { ILogTransport } from '@ftim/logger';
 
 import EncryptedFileSessionStore, { ISessionStore } from './common/session-store';
 import AuthClient from './auth';
 import MobileMintClient from './mobile-mint-client';
 import DataApiClient from './data-api-client';
 import { TOTPProviders } from './auth/access-platform-client';
+
+import Logger from './common/logger';
+Logger.setPrefix('MintClient');
 
 export { default as EncryptedFileSessionStore } from './common/session-store';
 export type { ISessionStore } from './common/session-store';
@@ -29,6 +32,8 @@ export type TMintClientOptions = {
   otpProviders: TOTPProviders
   /** A class implementing {@link ISessionStore}. Effectively a key-value store to persist and retrieve various information related to the current authentication session (e.g. authorization and refresh tokens). Defaults to {@link EncryptedFileSessionStore} using the above username & password as credentials. */
   sessionStore?: ISessionStore
+  /** A custom log transport */
+  logTransport?: ILogTransport
 };
 
 /**
@@ -61,7 +66,11 @@ export default class MintClient {
   private dataApiClient: DataApiClient;
 
   constructor(options: TMintClientOptions) {
-    const { username, password, otpProviders, sessionStore, } = options;
+    const { username, password, otpProviders, sessionStore, logTransport, } = options;
+
+    if (logTransport) {
+      Logger.setTransports([ logTransport, ]);
+    }
 
     this.sessionStore = sessionStore ?? new EncryptedFileSessionStore({
       identifier: username,

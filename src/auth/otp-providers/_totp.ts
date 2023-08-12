@@ -1,7 +1,9 @@
 import totpGenerator from 'totp-generator';
-import Logger from '@ftim/logger';
-import { IOTPProvider } from './_types';
+
+import Logger from '../../common/logger';
 const logger = Logger.ns('OTPProvider', 'TOTP');
+
+import { IOTPProvider } from './_types';
 
 /**
  * Generates a TOTP token using the provided secret

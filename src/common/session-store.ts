@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
-import Logger from '@ftim/logger';
+import Logger from '../common/logger';
 const logger = Logger.ns('SessionStore');
 
 import { TSession } from '../auth';

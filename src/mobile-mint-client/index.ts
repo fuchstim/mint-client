@@ -1,10 +1,10 @@
 import axios, { AxiosInstance } from 'axios';
-import Logger from '@ftim/logger';
-const logger = Logger.ns('MobileMint');
 
 import CookieStore from '../common/cookie-store';
 import Lock from '../common/lock';
 import dayjs from '../common/dayjs';
+import Logger from '../common/logger';
+const logger = Logger.ns('MobileMint');
 
 import type { ISessionStore } from '../common/session-store';
 import type AuthClient from '../auth';

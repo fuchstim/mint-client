@@ -1,9 +1,10 @@
 import { URL } from 'url';
-
 import express from 'express';
-import Logger from '@ftim/logger';
-import { IOTPProvider } from './_types';
+
+import Logger from '../../common/logger';
 const logger = Logger.ns('OTPProvider', 'Captcha');
+
+import { IOTPProvider } from './_types';
 
 const indexHtml = /* html */`
 <html>

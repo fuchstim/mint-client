@@ -1,6 +1,6 @@
 import { UUID, randomUUID } from 'crypto';
 
-import Logger from '@ftim/logger';
+import Logger from './logger';
 const logger = Logger.ns('Lock');
 
 const ACTIVE_LOCKS: Record<string, { id: UUID, expiresAt: Date }> = {};

@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { randomUUID } from 'crypto';
 import jsonwebtoken, { JwtPayload } from 'jsonwebtoken';
-import Logger from '@ftim/logger';
+import Logger from '../../common/logger';
 const logger = Logger.ns('Auth');
 
 import type { ISessionStore } from '../../common/session-store';

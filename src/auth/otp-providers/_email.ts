@@ -1,6 +1,6 @@
 import { ImapFlow, ImapFlowOptions, FetchMessageObject } from 'imapflow';
 import { parse as parseHtml } from 'node-html-parser';
-import Logger from '@ftim/logger';
+import Logger from '../../common/logger';
 const logger = Logger.ns('OTPProvider', 'Email');
 
 import sleep from '../../common/sleep';
