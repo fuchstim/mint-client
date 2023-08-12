@@ -6,6 +6,7 @@
   "out": "docs",
   "plugin": [
     "typedoc-plugin-rename-defaults",
+    "typedoc-plugin-missing-exports"
   ],
   "titleLink": "https://github.com/fuchstim/mint-client"
 }
