@@ -49,6 +49,26 @@ export type TCaptchaOTPProviderOptions = {
 
 type TCallbackParams = { accessToken: string, error: null } | { accessToken: null, error: Error };
 
+/**
+ * Spins up a lightweight express server to serve the captcha and intercept the response. `captcha_token` included in intercepted response functions as OTP.
+ *
+ * To obtain `captcha_token` manually, first assemble the url to access the captcha page.
+ * The base URL is `https://accounts.intuit.com/recaptcha-native.html`, and requires the following query-string parameters:
+ * * `offering_id`: should equal `Intuit.ifs.mint.3`
+ * * `locale`: should equal `en-ca`
+ * * `redirect_url`:  after solving the captcha, the user will be redirected to this URL (including the `captcha_token` query-string param). My testing indicated the protocol, hostname, or port of this URL are not validated, however the path needs to be exactly `/nativeredirect/v1`
+ *
+ * A valid captcha page URL might be: `https://accounts.intuit.com/recaptcha-native.html?offering_id=Intuit.ifs.mint.3&locale=en-ca&redirect_url=https://example.com/nativeredirect/v1`. On successful completion, the user would be redirected to `https://example.com/nativeredirect/v1?captcha_token=<the token we need>`
+ *
+ * @example
+ * ```typescript
+ * new OTPProviders.CaptchaOTPProvider({
+ *  timeoutMs: 60_000,
+ *  port: 8080,
+ *  host: 'localhost',
+ * });
+ * ```
+ */
 export class CaptchaOTPProvider implements IOTPProvider {
   private timeoutMs: number;
   private port: number;

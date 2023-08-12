@@ -3,6 +3,15 @@ import Logger from '@ftim/logger';
 import { IOTPProvider } from './_types';
 const logger = Logger.ns('OTPProvider', 'TOTP');
 
+/**
+ * Generates a TOTP token using the provided secret
+ *
+ * @example
+ * ```typescript
+ * new TOTPProvider('TOTPSECRET');
+ * ```
+*/
+
 export class TOTPProvider implements IOTPProvider {
   private secret: string;
 

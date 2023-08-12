@@ -11,7 +11,6 @@ export { default as EncryptedFileSessionStore } from './common/session-store';
 export type { ISessionStore } from './common/session-store';
 
 export * as OTPProviders from './auth/otp-providers';
-export type { IOTPProvider } from './auth/otp-providers';
 
 export { EOTPType } from './auth/access-platform-client';
 

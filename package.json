@@ -5,7 +5,7 @@
   "types": "dist/src/index.d.ts",
   "scripts": {
     "clean": "rm -rf ./dist",
-    "build": "tsc -p ./tsconfig.json",
+    "build": "tsc -p ./tsconfig.json; typedoc",
     "rebuild": "npm run clean && npm run build",
     "release": "npm publish --otp=$(op item get 'NPM Registry' --otp)",
     "prepublishOnly": "npm install && npm run rebuild",
@@ -22,7 +22,10 @@
     "@typescript-eslint/eslint-plugin": "^6.1.0",
     "@typescript-eslint/parser": "^6.1.0",
     "eslint": "^8.45.0",
+    "eslint-plugin-tsdoc": "^0.2.17",
     "ts-node": "^10.9.1",
+    "typedoc": "^0.24.8",
+    "typedoc-plugin-rename-defaults": "^0.6.5",
     "typescript": "^5.1.6"
   },
   "dependencies": {

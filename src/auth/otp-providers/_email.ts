@@ -9,8 +9,24 @@ import { IOTPProvider } from './_types';
 
 type TCustomOptions = { inbox: string, maxAttempts: number, delayMs: number, };
 
-// https:// imapflow.com/module-imapflow-ImapFlow.html#ImapFlow
+// https://imapflow.com/module-imapflow-ImapFlow.html#ImapFlow
 export type TEmailOTPProviderOptions = ImapFlowOptions & Partial<TCustomOptions>;
+
+/**
+ * Attempts to find OTP in recently received emails
+ *
+ * @example
+ * ```typescript
+ * new EmailOTPProvider({
+ *   host: 'imap.gmail.com',
+ *   port: 993,
+ *   auth: {
+ *     user: 'supersaver@gmail.com',
+ *     pass: 'supersecurepassword',
+ *   },
+ * });
+ * ```
+ */
 
 export class EmailOTPProvider implements IOTPProvider {
   private options: TEmailOTPProviderOptions & TCustomOptions;
