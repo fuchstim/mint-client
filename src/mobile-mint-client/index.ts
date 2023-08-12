@@ -107,7 +107,7 @@ export default class MobileMintClient {
     return categories.entries;
   }
 
-  async getTransactions(options: { accountIds: number[], fromDate: Date, toDate: Date, limit: number}) {
+  async getTransactions(options: { accountIds: number[], fromDate: Date, toDate: Date, limit: number }) {
     const { accountIds, fromDate, toDate, limit, } = options;
 
     const MAX_PAGE_SIZE = 500;
