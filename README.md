@@ -8,7 +8,7 @@
   <p align="center">
     mint-client is an <b>unofficial</b> TypeScript library facilitating authentication and requests to the Intuit Mint platform
     <br />
-    <a href="https://github.com/fuchstim/mint-client/wiki"><strong>Explore the docs »</strong></a>
+    <a href="https://fuchstim.github.io/mint-client/classes/MintClient.html"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://github.com/fuchstim/mint-client/issues">Report Bug</a>
@@ -17,9 +17,36 @@
   </p>
 </div>
 
-## Installation & Usage
+## Installation
 
-Please refer to the installation and usage guides in the [project wiki](https://github.com/fuchstim/mint-client/wiki).
+To install the mint-client library, run `npm install --save @ftim/mint-client`
+
+## Usage
+
+**Example:**
+
+```typescript
+import MintClient, { EOTPType, OTPProviders } from '@ftim/mint-client';
+
+const client = new MintClient({
+  username: 'supersaver',
+  password: 'supersecurepassword',
+  otpProviders: {
+    [EOTPType.CAPTCHA_TOKEN]: new OTPProviders.CaptchaOTPProvider(),
+    [EOTPType.TOTP]: new OTPProviders.TOTPProvider('TOTPSECRET'),
+    [EOTPType.EMAIL_OTP]: new OTPProviders.EmailOTPProvider({
+      host: 'imap.gmail.com',
+      port: 993,
+      auth: {
+        user: 'supersaver@gmail.com',
+        pass: 'supersecurepassword',
+      },
+    }),
+  },
+});
+```
+
+See [here](https://fuchstim.github.io/mint-client/classes/MintClient.html) for all available client methods.
 
 ## Roadmap
 
