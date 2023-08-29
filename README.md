@@ -34,6 +34,7 @@ const client = new MintClient({
   otpProviders: {
     [EOTPType.CAPTCHA_TOKEN]: new OTPProviders.CaptchaOTPProvider(),
     [EOTPType.TOTP]: new OTPProviders.TOTPProvider('TOTPSECRET'),
+    [EOTPType.SMS_OTP]: new OTPProviders.UserInputOTPProvider('Please enter your SMS OTP token:'),
     [EOTPType.EMAIL_OTP]: new OTPProviders.EmailOTPProvider({
       host: 'imap.gmail.com',
       port: 993,
